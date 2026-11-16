@@ -41,7 +41,7 @@ jobs:
           storePassword=$KEYSTORE_PASSWORD
           keyPassword=$KEY_PASSWORD
           keyAlias=$KEY_ALIAS
-          storeFile=app/arena-upload-key.jks
+          storeFile=arena-upload-key.jks
           EOF
           python3 - <<'PY'
           from pathlib import Path
