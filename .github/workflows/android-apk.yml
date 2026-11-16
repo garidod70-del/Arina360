@@ -18,13 +18,23 @@ jobs:
           channel: stable
       - name: Generate Android project
         working-directory: apps/mobile
-        run: flutter create --platforms=android .
-      - name: Build release APK
+        run: flutter create --platforms=android --project-name arena360 --org mn.arena360 .
+      - name: Build clean ARM64 release APK
         working-directory: apps/mobile
         run: |
+          flutter clean
           flutter pub get
-          flutter build apk --release
+          flutter build apk --release --target-platform android-arm64
+      - name: Verify APK signature and package
+        working-directory: apps/mobile
+        run: |
+          APK=build/app/outputs/flutter-apk/app-release.apk
+          test -s "$APK"
+          "$ANDROID_HOME"/build-tools/*/apksigner verify --verbose "$APK"
+          unzip -t "$APK"
       - uses: actions/upload-artifact@v4
         with:
-          name: arena360-release-apk
+          name: ARENA360-S21-ANDROID14-APK
           path: apps/mobile/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+          retention-days: 14
