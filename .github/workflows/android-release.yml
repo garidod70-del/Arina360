@@ -28,22 +28,36 @@ jobs:
               raise SystemExit("Missing ARENA_SIGNING_CONFIG repository secret")
           names = ["ARENA_KEYSTORE_BASE64", "ARENA_KEYSTORE_PASSWORD", "ARENA_KEY_ALIAS", "ARENA_KEY_PASSWORD"]
           values = {}
-          for name in names:
-              patterns = [
-                  rf"(?im)^\s*{name}\s*=\s*(\S+)\s*$",
-                  rf"(?ims)^\s*{name}\s*\n\s*Secret:\s*(\S+)",
-                  rf"(?im)^\s*{name}\s+Secret:\s*(\S+)\s*$",
-              ]
-              for pattern in patterns:
-                  match = re.search(pattern, raw)
-                  if match:
-                      values[name] = match.group(1).strip()
+          lines = [line.strip() for line in raw.splitlines()]
+          for i, line in enumerate(lines):
+              if line in names:
+                  for candidate in lines[i + 1:]:
+                      if not candidate:
+                          continue
+                      if candidate in names:
+                          break
+                      values[line] = candidate
                       break
+          # Also accept KEY=VALUE and "KEY Secret: VALUE" formats.
+          for name in names:
+              if name not in values:
+                  patterns = [
+                      rf"(?im)^[ \\t]*{name}[ \\t]*=[ \\t]*(\\S+)[ \\t]*$",
+                      rf"(?im)^[ \\t]*{name}[ \\t]+Secret:[ \\t]*(\\S+)[ \\t]*$",
+                      rf"(?ims)^[ \\t]*{name}[ \\t]*\\r?\\n[ \\t]*Secret:[ \\t]*(\\S+)",
+                  ]
+                  for pattern in patterns:
+                      match = re.search(pattern, raw)
+                      if match:
+                          values[name] = match.group(1).strip()
+                          break
               if name not in values:
                   raise SystemExit(f"Could not read {name} from ARENA_SIGNING_CONFIG. Paste the complete GITHUB_ACTIONS_SECRETS.txt contents.")
           with open(os.environ["GITHUB_ENV"], "a") as env:
-              for name, value in values.items():
-                  env.write(f"{name}={value}\n")
+              env.write(f"KEYSTORE_BASE64={values['ARENA_KEYSTORE_BASE64']}\\n")
+              env.write(f"KEYSTORE_PASSWORD={values['ARENA_KEYSTORE_PASSWORD']}\\n")
+              env.write(f"KEY_ALIAS={values['ARENA_KEY_ALIAS']}\\n")
+              env.write(f"KEY_PASSWORD={values['ARENA_KEY_PASSWORD']}\\n")
           PY
       - name: Generate Android project and configure signing
         working-directory: apps/mobile
