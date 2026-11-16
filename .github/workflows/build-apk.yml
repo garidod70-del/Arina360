@@ -1,0 +1,41 @@
+name: ARENA 360 Android APK
+on:
+  push:
+    paths:
+      - ARENA360_COMPLETE_SOURCE_PHASE7.zip
+      - .github/workflows/build-apk.yml
+  workflow_dispatch:
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract ARENA 360 source
+        run: |
+          test -f ARENA360_COMPLETE_SOURCE_PHASE7.zip
+          unzip -q ARENA360_COMPLETE_SOURCE_PHASE7.zip -d source
+          test -f source/arena360-starter/apps/mobile/pubspec.yaml
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Generate Android project
+        working-directory: source/arena360-starter/apps/mobile
+        run: flutter create --platforms=android --project-name arena360 --org mn.arena360 .
+      - name: Enable internet access
+        working-directory: source/arena360-starter/apps/mobile
+        run: sed -i '/<application/i\    <uses-permission android:name="android.permission.INTERNET" />' android/app/src/main/AndroidManifest.xml
+      - name: Install Flutter packages
+        working-directory: source/arena360-starter/apps/mobile
+        run: flutter pub get
+      - name: Analyze Flutter app
+        working-directory: source/arena360-starter/apps/mobile
+        run: flutter analyze
+      - name: Build release APK
+        working-directory: source/arena360-starter/apps/mobile
+        run: flutter build apk --release --dart-define=API_BASE_URL=https://api.example.mn/api/v1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ARENA360-APK
+          path: source/arena360-starter/apps/mobile/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
