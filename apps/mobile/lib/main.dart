@@ -424,48 +424,438 @@ class _HomePageState extends State<HomePage> {
 }
 
 
-const refereeSports=<String,List<String>>{'Багийн спорт':['Сагсан бөмбөг','Волейбол','3x3','Хөлбөмбөг'],'Ганцаарчилсан спорт':['Жүдо','Чөлөөт бөх'],'Үндэсний спорт':['Үндэсний бөх','Шагайн харваа']};
-const refereeRanks=<String,List<String>>{'Багийн спорт':['Олон улсын','Улсын','I зэрэг','II зэрэг','III зэрэг'],'Ганцаарчилсан спорт':['Олон улсын','Улсын','I зэрэг','II зэрэг','III зэрэг'],'Үндэсний бөх':['Хөлийн цэц','Засуул','Гарын даа'],'Шагайн харваа':['Цол зэрэгтэй шүүгч','Улсын цолтой','Аймгийн цолтой','Зэрэгтэй']};
-class RefereeBookingPage extends StatefulWidget{const RefereeBookingPage({super.key});@override State<RefereeBookingPage> createState()=>_RefereeBookingPageState();}
-class _RefereeBookingPageState extends State<RefereeBookingPage>{
-String role='Тэмцээн зохион байгуулагч',category='Багийн спорт',sport='Сагсан бөмбөг',rank='Улсын',booking='Нэг шүүгч',payment='Нэг тоглолтоор';
-final count=TextEditingController(text:'1'),rate=TextEditingController(text:'50000'),days=TextEditingController(text:'1'),transport=TextEditingController(text:'0'),food=TextEditingController(text:'0');
-bool addTransport=false,addFood=false,prepared=false;
-@override void dispose(){count.dispose();rate.dispose();days.dispose();transport.dispose();food.dispose();super.dispose();}
-List<String> get ranks=>category=='Үндэсний спорт'?(sport=='Үндэсний бөх'?refereeRanks['Үндэсний бөх']!:refereeRanks['Шагайн харваа']!):refereeRanks[category]!;
-int n(TextEditingController c)=>int.tryParse(c.text)??0;
-int get base=>n(count).clamp(0,10000)*n(rate).clamp(0,100000000)*(payment=='Нэг өдрөөр'?n(days).clamp(1,365):1);
-int get total=>base+(addTransport?n(transport).clamp(0,100000000):0)+(addFood?n(food).clamp(0,100000000):0);
-Widget sec(String t,Widget w)=>Padding(padding:const EdgeInsets.only(bottom:15),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(t,style:const TextStyle(fontWeight:FontWeight.w800,color:navy,fontSize:15)),const SizedBox(height:8),w]));
-Widget dd(String label,String value,List<String> values,ValueChanged<String?> change)=>DropdownButtonFormField<String>(value:value,isExpanded:true,decoration:InputDecoration(labelText:label),items:values.map((v)=>DropdownMenuItem(value:v,child:Text(v))).toList(),onChanged:change);
-Widget fld(String label,TextEditingController c)=>TextField(controller:c,keyboardType:TextInputType.number,onChanged:(_)=>setState((){}),decoration:InputDecoration(labelText:label));
-@override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const Text('Шүүгч захиалга')),body:ListView(padding:const EdgeInsets.all(18),children:[
-Container(padding:const EdgeInsets.all(18),decoration:BoxDecoration(gradient:const LinearGradient(colors:[navy,Color(0xFF244B91)]),borderRadius:BorderRadius.circular(18)),child:const Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('REFEREE SERVICE',style:TextStyle(color:Colors.white70,fontWeight:FontWeight.bold)),SizedBox(height:7),Text('Мэргэжлийн шүүгчийн захиалга',style:TextStyle(color:Colors.white,fontSize:21,fontWeight:FontWeight.w900)),SizedBox(height:5),Text('Шүүгчийн төрөл, зэрэглэл, баг болон зардлаа тооцоол.',style:TextStyle(color:Colors.white70))])),
-const SizedBox(height:18),
-sec('1. Хэрэглэгчийн төрөл',SegmentedButton<String>(segments:const[ButtonSegment(value:'Тэмцээн зохион байгуулагч',label:Text('Зохион байгуулагч')),ButtonSegment(value:'Шүүгч',label:Text('Шүүгч'))],selected:{role},onSelectionChanged:(v)=>setState(()=>role=v.first))),
-sec('2. Спортын ангилал',dd('Ангилал',category,refereeSports.keys.toList(),(v)=>setState(()=>{category=v!,sport=refereeSports[category]!.first,rank=ranks.first}))),
-sec('Спортын төрөл',dd('Спорт',sport,refereeSports[category]!, (v)=>setState(()=>{sport=v!,rank=ranks.first}))),
-sec('3. Шүүгчийн зэрэглэл / үүрэг',dd('Зэрэглэл',rank,ranks,(v)=>setState(()=>rank=v!))),
-sec('4. Захиалгын төрөл',dd('Захиалга',booking,const['Нэг шүүгч','Шүүгчдийн баг (Crew)','Спартакиад / спортын наадмын багц'],(v)=>setState(()=>booking=v!))),
-sec('5. Төлбөрийн тооцоолол',Column(children:[
-dd('Тооцох хэлбэр',payment,const['Нэг тоглолтоор','Нэг өдрөөр','Нэг даваагаар'],(v)=>setState(()=>payment=v!)),
-const SizedBox(height:9),Row(children:[Expanded(child:fld('Шүүгчийн тоо',count)),const SizedBox(width:10),Expanded(child:fld('Нэгж үнэ (₮)',rate))]),
-if(payment=='Нэг өдрөөр')... [const SizedBox(height:9),fld('Ажиллах өдөр',days)],
-SwitchListTile(contentPadding:EdgeInsets.zero,title:const Text('Унааны зардал нэмэх'),value:addTransport,onChanged:(v)=>setState(()=>addTransport=v)),
-if(addTransport)fld('Нийт унааны зардал (₮)',transport),
-SwitchListTile(contentPadding:EdgeInsets.zero,title:const Text('Хоолны зардал нэмэх'),value:addFood,onChanged:(v)=>setState(()=>addFood=v)),
-if(addFood)fld('Нийт хоолны зардал (₮)',food),
-])),
-Container(padding:const EdgeInsets.all(18),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(16),border:Border.all(color:const Color(0xFFDCE5F2))),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-const Text('ТООЦООНЫ НЭГТГЭЛ',style:TextStyle(color:navy,fontWeight:FontWeight.w900)),const SizedBox(height:10),
-Text('Үндсэн төлбөр: '+base.toString()+' ₮'),if(addTransport)Text('Унаа: '+n(transport).toString()+' ₮'),if(addFood)Text('Хоол: '+n(food).toString()+' ₮'),
-const Divider(height:22),Text('НИЙТ ДҮН: '+total.toString()+' ₮',style:const TextStyle(fontWeight:FontWeight.w900,color:blue,fontSize:20)),
-const Text('Жишиг тооцоо. Бодит тарифыг админ болон үйлчилгээ үзүүлэгч баталгаажуулна.',style:TextStyle(fontSize:11,color:Colors.blueGrey)),
-])),
-const SizedBox(height:15),FilledButton.icon(style:FilledButton.styleFrom(backgroundColor:blue,padding:const EdgeInsets.symmetric(vertical:15)),onPressed:()=>setState(()=>prepared=true),icon:const Icon(Icons.send),label:Text(role=='Шүүгч'?'ШҮҮГЧИЙН ПРОФАЙЛ БЭЛТГЭХ':'ЗАХИАЛГЫН МЭДЭЭЛЭЛ БЭЛТГЭХ')),
-if(prepared)const Text('Мэдээлэл бэлэн. Онлайн захиалга, төлбөрийн баталгаажуулалт серверийн холболт шаардлагатай.',textAlign:TextAlign.center,style:TextStyle(color:Colors.blueGrey,fontSize:12)),
-const SizedBox(height:24),
-]));}
+const refereeSports = <String, List<String>>{
+  'Багийн спорт': ['Сагсан бөмбөг', 'Волейбол', '3x3', 'Хөлбөмбөг'],
+  'Ганцаарчилсан спорт': ['Жүдо', 'Чөлөөт бөх'],
+  'Үндэсний спорт': ['Үндэсний бөх', 'Шагайн харваа'],
+};
+
+const refereeRanks = <String, List<String>>{
+  'Багийн спорт': ['Олон улсын', 'Улсын', 'I зэрэг', 'II зэрэг', 'III зэрэг'],
+  'Ганцаарчилсан спорт': ['Олон улсын', 'Улсын', 'I зэрэг', 'II зэрэг', 'III зэрэг'],
+  'Үндэсний бөх': ['Улсын цолтой', 'Аймгийн цолтой', 'Сумын цолтой', 'Засуул', 'Гарын даа'],
+  'Шагайн харваа': ['Улсын цолтой', 'Аймгийн цолтой', 'Зэрэгтэй шүүгч'],
+};
+
+class RefereeBookingPage extends StatefulWidget {
+  const RefereeBookingPage({super.key});
+  @override
+  State<RefereeBookingPage> createState() => _RefereeBookingPageState();
+}
+
+class _RefereeBookingPageState extends State<RefereeBookingPage> {
+  final _formKey = GlobalKey<FormState>();
+  final _count = TextEditingController(text: '1');
+  final _rate = TextEditingController(text: '50000');
+  final _days = TextEditingController(text: '1');
+  final _transport = TextEditingController(text: '0');
+  final _food = TextEditingController(text: '0');
+  final _venue = TextEditingController();
+  final _contactName = TextEditingController();
+  final _contactPhone = TextEditingController();
+  final _notes = TextEditingController();
+
+  String role = 'Тэмцээн зохион байгуулагч';
+  String category = 'Багийн спорт';
+  String sport = 'Сагсан бөмбөг';
+  String rank = 'Улсын';
+  String booking = 'Нэг шүүгч';
+  String payment = 'Нэг тоглолтоор';
+  DateTime? eventDate;
+  TimeOfDay? eventTime;
+  bool addTransport = false;
+  bool addFood = false;
+
+  List<String> get ranks {
+    if (category == 'Үндэсний спорт') {
+      return sport == 'Үндэсний бөх'
+          ? refereeRanks['Үндэсний бөх']!
+          : refereeRanks['Шагайн харваа']!;
+    }
+    return refereeRanks[category]!;
+  }
+
+  int _number(TextEditingController c) => int.tryParse(c.text.trim()) ?? 0;
+  int _bounded(TextEditingController c, int max) =>
+      _number(c).clamp(0, max).toInt();
+
+  int get baseAmount {
+    final people = _bounded(_count, 10000);
+    final unitPrice = _bounded(_rate, 100000000);
+    final days = payment == 'Нэг өдрөөр'
+        ? _bounded(_days, 365).clamp(1, 365).toInt()
+        : 1;
+    return people * unitPrice * days;
+  }
+
+  int get totalAmount =>
+      baseAmount +
+      (addTransport ? _bounded(_transport, 100000000) : 0) +
+      (addFood ? _bounded(_food, 100000000) : 0);
+
+  @override
+  void dispose() {
+    _count.dispose();
+    _rate.dispose();
+    _days.dispose();
+    _transport.dispose();
+    _food.dispose();
+    _venue.dispose();
+    _contactName.dispose();
+    _contactPhone.dispose();
+    _notes.dispose();
+    super.dispose();
+  }
+
+  Future<void> _chooseDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: eventDate ?? now,
+      firstDate: DateTime(now.year, now.month, now.day),
+      lastDate: DateTime(now.year + 3),
+      helpText: 'ТЭМЦЭЭНИЙ ОГНОО СОНГОХ',
+    );
+    if (picked != null) setState(() => eventDate = picked);
+  }
+
+  Future<void> _chooseTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: eventTime ?? const TimeOfDay(hour: 9, minute: 0),
+      helpText: 'ЭХЛЭХ ЦАГ СОНГОХ',
+    );
+    if (picked != null) setState(() => eventTime = picked);
+  }
+
+  String _dateText(DateTime? d) => d == null
+      ? 'Огноо сонгох'
+      : d.year.toString() + '-' +
+          d.month.toString().padLeft(2, '0') + '-' +
+          d.day.toString().padLeft(2, '0');
+
+  String _money(int amount) => amount.toString().replaceAllMapped(
+        RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
+        (match) => match[1]! + ',',
+      ) + ' ₮';
+
+  Widget _section(String title, Widget child) => Padding(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: const TextStyle(
+                fontWeight: FontWeight.w800, color: navy, fontSize: 15)),
+            const SizedBox(height: 8),
+            child,
+          ],
+        ),
+      );
+
+  Widget _dropdown(String label, String value, List<String> values,
+          ValueChanged<String?> onChanged) =>
+      DropdownButtonFormField<String>(
+        value: value,
+        isExpanded: true,
+        decoration: InputDecoration(labelText: label),
+        items: values.map((v) =>
+            DropdownMenuItem(value: v, child: Text(v))).toList(),
+        onChanged: onChanged,
+      );
+
+  Widget _numberField(String label, TextEditingController c,
+      {bool required = true}) =>
+      TextFormField(
+        controller: c,
+        keyboardType: TextInputType.number,
+        onChanged: (_) => setState(() {}),
+        decoration: InputDecoration(labelText: label),
+        validator: (value) {
+          final number = int.tryParse((value ?? '').trim());
+          if (required && (number == null || number <= 0)) {
+            return '0-ээс их бүхэл тоо оруулна уу';
+          }
+          if (!required && (number == null || number < 0)) {
+            return 'Зөв дүн оруулна уу';
+          }
+          return null;
+        },
+      );
+
+  Widget _summaryLine(String label, String value, {bool strong = false}) =>
+      Padding(
+        padding: const EdgeInsets.symmetric(vertical: 3),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: Text(label,
+                style: TextStyle(color: Colors.blueGrey.shade700, fontSize: 13))),
+            const SizedBox(width: 8),
+            Flexible(child: Text(value.isEmpty ? '—' : value,
+                textAlign: TextAlign.end,
+                style: TextStyle(fontSize: 13,
+                    fontWeight: strong ? FontWeight.w900 : FontWeight.w600,
+                    color: strong ? blue : navy))),
+          ],
+        ),
+      );
+
+  void _prepareRequest() {
+    if (!_formKey.currentState!.validate()) return;
+    if (eventDate == null || eventTime == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Тэмцээний огноо, эхлэх цагийг сонгоно уу.')));
+      return;
+    }
+
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('ШҮҮГЧИЙН ХҮСЭЛТИЙН НЭГТГЭЛ'),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _summaryLine('Хүсэлт гаргагч', role),
+              _summaryLine('Спорт', category + ' / ' + sport),
+              _summaryLine('Зэрэглэл / үүрэг', rank),
+              _summaryLine('Захиалгын төрөл', booking),
+              _summaryLine('Огноо', _dateText(eventDate)),
+              _summaryLine('Эхлэх цаг', eventTime!.format(context)),
+              _summaryLine('Байршил', _venue.text.trim()),
+              _summaryLine('Шүүгчийн тоо', _count.text.trim()),
+              _summaryLine('Холбоо барих', _contactName.text.trim() +
+                  ' / ' + _contactPhone.text.trim()),
+              const Divider(),
+              _summaryLine('Үндсэн төлбөр', _money(baseAmount)),
+              if (addTransport)
+                _summaryLine('Унаа', _money(_bounded(_transport, 100000000))),
+              if (addFood)
+                _summaryLine('Хоол', _money(_bounded(_food, 100000000))),
+              _summaryLine('НИЙТ ДҮН', _money(totalAmount), strong: true),
+              if (_notes.text.trim().isNotEmpty) ...[
+                const SizedBox(height: 8),
+                const Text('Нэмэлт хүсэлт',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                Text(_notes.text.trim()),
+              ],
+              const SizedBox(height: 12),
+              const Text(
+                'Энэ нь урьдчилсан хүсэлтийн нэгтгэл. Одоогоор серверт илгээгдэхгүй; бодит захиалга баталгаажуулахад серверийн холболт шаардлагатай.',
+                style: TextStyle(fontSize: 12, color: Colors.blueGrey),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('ЗАСАХ')),
+          FilledButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('ОЙЛГОМЖТОЙ')),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Шүүгчийн үйлчилгээ')),
+    body: Form(
+      key: _formKey,
+      child: ListView(
+        padding: const EdgeInsets.all(18),
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(colors: [navy, Color(0xFF244B91)]),
+              borderRadius: BorderRadius.circular(18)),
+            child: const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('ARENA 360 / REFEREE',
+                    style: TextStyle(color: Colors.white70,
+                        fontWeight: FontWeight.bold)),
+                SizedBox(height: 8),
+                Text('Шүүгчийн захиалгын төв',
+                    style: TextStyle(color: Colors.white, fontSize: 22,
+                        fontWeight: FontWeight.w900)),
+                SizedBox(height: 6),
+                Text('Спорт, зэрэглэл, огноо болон зардлаа нэг дороос тохируул.',
+                    style: TextStyle(color: Colors.white70)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          _section('1. Хэрэглэгчийн төрөл',
+            SegmentedButton<String>(
+              segments: const [
+                ButtonSegment(value: 'Тэмцээн зохион байгуулагч',
+                    label: Text('Зохион байгуулагч')),
+                ButtonSegment(value: 'Шүүгч', label: Text('Шүүгч')),
+              ],
+              selected: {role},
+              onSelectionChanged: (values) =>
+                  setState(() => role = values.first),
+            )),
+          _section('2. Спортын ангилал',
+            _dropdown('Ангилал', category, refereeSports.keys.toList(), (value) {
+              if (value == null) return;
+              setState(() {
+                category = value;
+                sport = refereeSports[category]!.first;
+                rank = ranks.first;
+              });
+            })),
+          _section('Спортын төрөл',
+            _dropdown('Спорт', sport, refereeSports[category]!, (value) {
+              if (value == null) return;
+              setState(() {
+                sport = value;
+                rank = ranks.first;
+              });
+            })),
+          _section('3. Шүүгчийн зэрэглэл / үүрэг',
+            _dropdown('Зэрэглэл', rank, ranks,
+                (value) => setState(() => rank = value!))),
+          _section('4. Захиалгын төрөл',
+            _dropdown('Захиалгын багц', booking, const [
+              'Нэг шүүгч',
+              'Шүүгчдийн баг (Crew)',
+              'Спартакиад / спортын наадмын багц',
+            ], (value) => setState(() => booking = value!))),
+          _section('5. Тэмцээний мэдээлэл', Column(children: [
+            Row(children: [
+              Expanded(child: OutlinedButton.icon(
+                onPressed: _chooseDate,
+                icon: const Icon(Icons.calendar_month),
+                label: Text(_dateText(eventDate)))),
+              const SizedBox(width: 10),
+              Expanded(child: OutlinedButton.icon(
+                onPressed: _chooseTime,
+                icon: const Icon(Icons.schedule),
+                label: Text(eventTime == null
+                    ? 'Цаг сонгох' : eventTime!.format(context)))),
+            ]),
+            const SizedBox(height: 10),
+            TextFormField(
+              controller: _venue,
+              decoration: const InputDecoration(
+                labelText: 'Тэмцээн болох газар / заал',
+                prefixIcon: Icon(Icons.location_on_outlined)),
+              validator: (v) => (v ?? '').trim().isEmpty
+                  ? 'Байршил оруулна уу' : null),
+          ])),
+          _section('6. Төлбөрийн тооцоолол', Column(children: [
+            _dropdown('Тооцох хэлбэр', payment, const [
+              'Нэг тоглолтоор', 'Нэг өдрөөр', 'Нэг даваагаар',
+            ], (value) => setState(() => payment = value!)),
+            const SizedBox(height: 10),
+            Row(children: [
+              Expanded(child: _numberField('Шүүгчийн тоо', _count)),
+              const SizedBox(width: 10),
+              Expanded(child: _numberField('Нэгж үнэ (₮)', _rate)),
+            ]),
+            if (payment == 'Нэг өдрөөр') ...[
+              const SizedBox(height: 10),
+              _numberField('Ажиллах өдөр', _days),
+            ],
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Унааны зардал нэмэх'),
+              value: addTransport,
+              onChanged: (v) => setState(() => addTransport = v)),
+            if (addTransport)
+              _numberField('Нийт унааны зардал (₮)', _transport,
+                  required: false),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Хоолны зардал нэмэх'),
+              value: addFood,
+              onChanged: (v) => setState(() => addFood = v)),
+            if (addFood)
+              _numberField('Нийт хоолны зардал (₮)', _food, required: false),
+          ])),
+          _section('7. Холбоо барих мэдээлэл', Column(children: [
+            TextFormField(
+              controller: _contactName,
+              decoration: const InputDecoration(
+                labelText: 'Холбоо барих хүний нэр',
+                prefixIcon: Icon(Icons.person_outline)),
+              validator: (v) => (v ?? '').trim().isEmpty
+                  ? 'Нэрээ оруулна уу' : null),
+            const SizedBox(height: 10),
+            TextFormField(
+              controller: _contactPhone,
+              keyboardType: TextInputType.phone,
+              maxLength: 8,
+              decoration: const InputDecoration(
+                labelText: 'Утасны дугаар',
+                prefixIcon: Icon(Icons.phone), counterText: ''),
+              validator: (v) => (v ?? '').trim().length < 8
+                  ? '8 оронтой утасны дугаар оруулна уу' : null),
+            const SizedBox(height: 10),
+            TextFormField(
+              controller: _notes,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                labelText: 'Нэмэлт тайлбар (заавал биш)',
+                alignLabelWithHint: true,
+                prefixIcon: Icon(Icons.notes)),
+            ),
+          ])),
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFDCE5F2))),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('ТӨЛБӨРИЙН НЭГТГЭЛ',
+                    style: TextStyle(color: navy, fontWeight: FontWeight.w900)),
+                const SizedBox(height: 10),
+                _summaryLine('Үндсэн төлбөр', _money(baseAmount)),
+                if (addTransport)
+                  _summaryLine('Унаа', _money(_bounded(_transport, 100000000))),
+                if (addFood)
+                  _summaryLine('Хоол', _money(_bounded(_food, 100000000))),
+                const Divider(height: 22),
+                _summaryLine('НИЙТ ДҮН', _money(totalAmount), strong: true),
+                const SizedBox(height: 5),
+                const Text(
+                  'Жишиг тариф. Эцсийн үнийг шүүгч болон захиалагч харилцан баталгаажуулна.',
+                  style: TextStyle(fontSize: 11, color: Colors.blueGrey)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 54,
+            child: FilledButton.icon(
+              style: FilledButton.styleFrom(backgroundColor: blue,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14))),
+              onPressed: _prepareRequest,
+              icon: const Icon(Icons.assignment_turned_in_outlined),
+              label: const Text('ЗАХИАЛГЫН ХҮСЭЛТ БЭЛТГЭХ',
+                  style: TextStyle(fontWeight: FontWeight.w800)),
+            ),
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Одоогийн хувилбар хүсэлтийг шалгаж, нэгтгэл харуулна. Онлайн илгээлт, бодит шүүгчийн жагсаалт болон төлбөрийн баталгаажуулалт серверийн холболт нэмсний дараа ажиллана.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 11, color: Colors.blueGrey)),
+          const SizedBox(height: 24),
+        ],
+      ),
+    ),
+  );
 }
 
 class ServicePage extends StatelessWidget {
