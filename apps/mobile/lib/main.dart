@@ -67,7 +67,7 @@ class _AuthPageState extends State<AuthPage> {
   final _phone = TextEditingController();
   final _password = TextEditingController();
   final _repeatPassword = TextEditingController();
-  bool _isRegister = true;
+  bool _isRegister = false;
   bool _showPassword = false;
   bool _acceptedTerms = false;
 
@@ -80,9 +80,9 @@ class _AuthPageState extends State<AuthPage> {
   }
 
   String? _validatePhone(String? value) {
-    return RegExp(r'^\\d{8}$').hasMatch((value ?? '').trim())
+    return (value ?? '').trim().isNotEmpty
         ? null
-        : '8 оронтой утасны дугаар оруулна уу';
+        : 'Утасны дугаар оруулна уу';
   }
 
   void _submit() {
@@ -182,8 +182,8 @@ class _AuthPageState extends State<AuthPage> {
                         ),
                       ),
                       validator: (value) =>
-                          value == null || value.length < 8
-                              ? 'Нууц үг 8-аас доошгүй тэмдэгт байна'
+                          value == null || value.isEmpty
+                              ? 'Нууц үг оруулна уу'
                               : null,
                     ),
                     if (_isRegister) ...[
@@ -234,7 +234,7 @@ class _AuthPageState extends State<AuthPage> {
                       ),
                     ),
                     const Text(
-                      'Туршилтын хувилбар: бүртгэл төхөөрөмж дээр зөвхөн дэлгэцийн урсгалыг шалгах зориулалттай. OTP болон серверийн баталгаажуулалт холбогдоогүй.',
+                      'Туршилтын нэвтрэлт: дурын утасны дугаар болон хоосон биш нууц үгээр нэвтэрнэ. Серверийн баталгаажуулалт холбогдоогүй.',
                       textAlign: TextAlign.center,
                       style: TextStyle(fontSize: 11, color: Colors.blueGrey),
                     ),
