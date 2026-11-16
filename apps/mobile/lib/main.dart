@@ -256,9 +256,58 @@ class _AuthPageState extends State<AuthPage> {
   }
 }
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   final String phone;
   const HomePage({super.key, required this.phone});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkForUpdateNotice());
+  }
+
+  Future<void> _checkForUpdateNotice() async {
+    try {
+      final manifest = await http.get(Uri.parse(
+        'https://raw.githubusercontent.com/garidod70-del/Arina360/main/apps/mobile/version.json',
+      )).timeout(const Duration(seconds: 12));
+      if (manifest.statusCode != 200 || !mounted) return;
+      final data = jsonDecode(manifest.body) as Map<String, dynamic>;
+      final info = await PackageInfo.fromPlatform();
+      final installed = int.tryParse(info.buildNumber) ?? 0;
+      final latest = (data['buildNumber'] as num).toInt();
+      if (latest <= installed || !mounted) return;
+      showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('ARENA 360 шинэчлэлт'),
+          content: Text('Шинэ хувилбар ${data['version']} бэлэн байна. Одоо шинэчлэх үү?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Дараа'),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const AppUpdatePage()),
+                );
+              },
+              child: const Text('ШИНЭЧЛЭХ'),
+            ),
+          ],
+        ),
+      );
+    } catch (_) {
+      // Keep the home screen usable when the network is unavailable.
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -307,7 +356,7 @@ class HomePage extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  'Тавтай морил, $phone',
+                  'Тавтай морил, ${widget.phone}',
                   style: const TextStyle(color: Colors.white70),
                 ),
               ],
