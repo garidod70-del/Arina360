@@ -1,0 +1,42 @@
+name: ARENA 360 Android APK
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Generate Android project
+        working-directory: apps/mobile
+        run: flutter create --platforms=android --project-name arena360 --org mn.arena360 .
+      - name: Add Internet permission
+        working-directory: apps/mobile
+        run: sed -i '/<application/i\    <uses-permission android:name="android.permission.INTERNET" />' android/app/src/main/AndroidManifest.xml
+      - name: Install packages
+        working-directory: apps/mobile
+        run: flutter pub get
+      - name: Analyze source
+        working-directory: apps/mobile
+        run: flutter analyze
+        continue-on-error: true
+      - name: Build release APK
+        working-directory: apps/mobile
+        run: flutter build apk --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ARENA360-Android-APK
+          path: apps/mobile/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+          retention-days: 14
