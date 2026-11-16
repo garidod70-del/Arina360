@@ -30,9 +30,9 @@ jobs:
           values = {}
           for name in names:
               patterns = [
-                  rf"(?im)^\\s*{name}\\s*=\\s*(\\S+)\\s*$",
-                  rf"(?ims)^\\s*{name}\\s*\\n\\s*Secret:\\s*(\\S+)",
-                  rf"(?im)^\\s*{name}\\s+Secret:\\s*(\\S+)\\s*$",
+                  rf"(?im)^\s*{name}\s*=\s*(\S+)\s*$",
+                  rf"(?ims)^\s*{name}\s*\n\s*Secret:\s*(\S+)",
+                  rf"(?im)^\s*{name}\s+Secret:\s*(\S+)\s*$",
               ]
               for pattern in patterns:
                   match = re.search(pattern, raw)
@@ -43,7 +43,7 @@ jobs:
                   raise SystemExit(f"Could not read {name} from ARENA_SIGNING_CONFIG. Paste the complete GITHUB_ACTIONS_SECRETS.txt contents.")
           with open(os.environ["GITHUB_ENV"], "a") as env:
               for name, value in values.items():
-                  env.write(f"{name}={value}\\n")
+                  env.write(f"{name}={value}\n")
           PY
       - name: Generate Android project and configure signing
         working-directory: apps/mobile
