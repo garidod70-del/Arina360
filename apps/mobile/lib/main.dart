@@ -325,7 +325,7 @@ class HomePage extends StatelessWidget {
                 borderRadius: BorderRadius.circular(16),
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) => ServicePage(service: service),
+                    builder: (_) => index == 0 ? const RefereeBookingPage() : ServicePage(service: service),
                   ),
                 ),
                 child: Container(
@@ -358,6 +358,51 @@ class HomePage extends StatelessWidget {
       ),
     );
   }
+}
+
+
+const refereeSports=<String,List<String>>{'Багийн спорт':['Сагсан бөмбөг','Волейбол','3x3','Хөлбөмбөг'],'Ганцаарчилсан спорт':['Жүдо','Чөлөөт бөх'],'Үндэсний спорт':['Үндэсний бөх','Шагайн харваа']};
+const refereeRanks=<String,List<String>>{'Багийн спорт':['Олон улсын','Улсын','I зэрэг','II зэрэг','III зэрэг'],'Ганцаарчилсан спорт':['Олон улсын','Улсын','I зэрэг','II зэрэг','III зэрэг'],'Үндэсний бөх':['Хөлийн цэц','Засуул','Гарын даа'],'Шагайн харваа':['Цол зэрэгтэй шүүгч','Улсын цолтой','Аймгийн цолтой','Зэрэгтэй']};
+class RefereeBookingPage extends StatefulWidget{const RefereeBookingPage({super.key});@override State<RefereeBookingPage> createState()=>_RefereeBookingPageState();}
+class _RefereeBookingPageState extends State<RefereeBookingPage>{
+String role='Тэмцээн зохион байгуулагч',category='Багийн спорт',sport='Сагсан бөмбөг',rank='Улсын',booking='Нэг шүүгч',payment='Нэг тоглолтоор';
+final count=TextEditingController(text:'1'),rate=TextEditingController(text:'50000'),days=TextEditingController(text:'1'),transport=TextEditingController(text:'0'),food=TextEditingController(text:'0');
+bool addTransport=false,addFood=false,prepared=false;
+@override void dispose(){count.dispose();rate.dispose();days.dispose();transport.dispose();food.dispose();super.dispose();}
+List<String> get ranks=>category=='Үндэсний спорт'?(sport=='Үндэсний бөх'?refereeRanks['Үндэсний бөх']!:refereeRanks['Шагайн харваа']!):refereeRanks[category]!;
+int n(TextEditingController c)=>int.tryParse(c.text)??0;
+int get base=>n(count).clamp(0,10000)*n(rate).clamp(0,100000000)*(payment=='Нэг өдрөөр'?n(days).clamp(1,365):1);
+int get total=>base+(addTransport?n(transport).clamp(0,100000000):0)+(addFood?n(food).clamp(0,100000000):0);
+Widget sec(String t,Widget w)=>Padding(padding:const EdgeInsets.only(bottom:15),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(t,style:const TextStyle(fontWeight:FontWeight.w800,color:navy,fontSize:15)),const SizedBox(height:8),w]));
+Widget dd(String label,String value,List<String> values,ValueChanged<String?> change)=>DropdownButtonFormField<String>(value:value,isExpanded:true,decoration:InputDecoration(labelText:label),items:values.map((v)=>DropdownMenuItem(value:v,child:Text(v))).toList(),onChanged:change);
+Widget fld(String label,TextEditingController c)=>TextField(controller:c,keyboardType:TextInputType.number,onChanged:(_)=>setState((){}),decoration:InputDecoration(labelText:label));
+@override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const Text('Шүүгч захиалга')),body:ListView(padding:const EdgeInsets.all(18),children:[
+Container(padding:const EdgeInsets.all(18),decoration:BoxDecoration(gradient:const LinearGradient(colors:[navy,Color(0xFF244B91)]),borderRadius:BorderRadius.circular(18)),child:const Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('REFEREE SERVICE',style:TextStyle(color:Colors.white70,fontWeight:FontWeight.bold)),SizedBox(height:7),Text('Мэргэжлийн шүүгчийн захиалга',style:TextStyle(color:Colors.white,fontSize:21,fontWeight:FontWeight.w900)),SizedBox(height:5),Text('Шүүгчийн төрөл, зэрэглэл, баг болон зардлаа тооцоол.',style:TextStyle(color:Colors.white70))])),
+const SizedBox(height:18),
+sec('1. Хэрэглэгчийн төрөл',SegmentedButton<String>(segments:const[ButtonSegment(value:'Тэмцээн зохион байгуулагч',label:Text('Зохион байгуулагч')),ButtonSegment(value:'Шүүгч',label:Text('Шүүгч'))],selected:{role},onSelectionChanged:(v)=>setState(()=>role=v.first))),
+sec('2. Спортын ангилал',dd('Ангилал',category,refereeSports.keys.toList(),(v)=>setState(()=>{category=v!,sport=refereeSports[category]!.first,rank=ranks.first}))),
+sec('Спортын төрөл',dd('Спорт',sport,refereeSports[category]!, (v)=>setState(()=>{sport=v!,rank=ranks.first}))),
+sec('3. Шүүгчийн зэрэглэл / үүрэг',dd('Зэрэглэл',rank,ranks,(v)=>setState(()=>rank=v!))),
+sec('4. Захиалгын төрөл',dd('Захиалга',booking,const['Нэг шүүгч','Шүүгчдийн баг (Crew)','Спартакиад / спортын наадмын багц'],(v)=>setState(()=>booking=v!))),
+sec('5. Төлбөрийн тооцоолол',Column(children:[
+dd('Тооцох хэлбэр',payment,const['Нэг тоглолтоор','Нэг өдрөөр','Нэг даваагаар'],(v)=>setState(()=>payment=v!)),
+const SizedBox(height:9),Row(children:[Expanded(child:fld('Шүүгчийн тоо',count)),const SizedBox(width:10),Expanded(child:fld('Нэгж үнэ (₮)',rate))]),
+if(payment=='Нэг өдрөөр')... [const SizedBox(height:9),fld('Ажиллах өдөр',days)],
+SwitchListTile(contentPadding:EdgeInsets.zero,title:const Text('Унааны зардал нэмэх'),value:addTransport,onChanged:(v)=>setState(()=>addTransport=v)),
+if(addTransport)fld('Нийт унааны зардал (₮)',transport),
+SwitchListTile(contentPadding:EdgeInsets.zero,title:const Text('Хоолны зардал нэмэх'),value:addFood,onChanged:(v)=>setState(()=>addFood=v)),
+if(addFood)fld('Нийт хоолны зардал (₮)',food),
+])),
+Container(padding:const EdgeInsets.all(18),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(16),border:Border.all(color:const Color(0xFFDCE5F2))),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+const Text('ТООЦООНЫ НЭГТГЭЛ',style:TextStyle(color:navy,fontWeight:FontWeight.w900)),const SizedBox(height:10),
+Text('Үндсэн төлбөр: '+base.toString()+' ₮'),if(addTransport)Text('Унаа: '+n(transport).toString()+' ₮'),if(addFood)Text('Хоол: '+n(food).toString()+' ₮'),
+const Divider(height:22),Text('НИЙТ ДҮН: '+total.toString()+' ₮',style:const TextStyle(fontWeight:FontWeight.w900,color:blue,fontSize:20)),
+const Text('Жишиг тооцоо. Бодит тарифыг админ болон үйлчилгээ үзүүлэгч баталгаажуулна.',style:TextStyle(fontSize:11,color:Colors.blueGrey)),
+])),
+const SizedBox(height:15),FilledButton.icon(style:FilledButton.styleFrom(backgroundColor:blue,padding:const EdgeInsets.symmetric(vertical:15)),onPressed:()=>setState(()=>prepared=true),icon:const Icon(Icons.send),label:Text(role=='Шүүгч'?'ШҮҮГЧИЙН ПРОФАЙЛ БЭЛТГЭХ':'ЗАХИАЛГЫН МЭДЭЭЛЭЛ БЭЛТГЭХ')),
+if(prepared)const Text('Мэдээлэл бэлэн. Онлайн захиалга, төлбөрийн баталгаажуулалт серверийн холболт шаардлагатай.',textAlign:TextAlign.center,style:TextStyle(color:Colors.blueGrey,fontSize:12)),
+const SizedBox(height:24),
+]));}
 }
 
 class ServicePage extends StatelessWidget {
