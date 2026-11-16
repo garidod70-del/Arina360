@@ -1,0 +1,101 @@
+name: ARENA 360 Signed Release
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.5'
+          channel: stable
+      - name: Check signing secrets
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ARENA_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ARENA_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ARENA_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ARENA_KEY_PASSWORD }}
+        run: |
+          test -n "$KEYSTORE_BASE64" || (echo "Missing ARENA_KEYSTORE_BASE64 secret" && exit 1)
+          test -n "$KEYSTORE_PASSWORD" || (echo "Missing ARENA_KEYSTORE_PASSWORD secret" && exit 1)
+          test -n "$KEY_ALIAS" || (echo "Missing ARENA_KEY_ALIAS secret" && exit 1)
+          test -n "$KEY_PASSWORD" || (echo "Missing ARENA_KEY_PASSWORD secret" && exit 1)
+      - name: Generate Android project and configure signing
+        working-directory: apps/mobile
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ARENA_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ARENA_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ARENA_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ARENA_KEY_PASSWORD }}
+        run: |
+          flutter create --platforms=android --project-name arena360 --org mn.arena360 .
+          echo "$KEYSTORE_BASE64" | base64 --decode > android/app/arena-upload-key.jks
+          cat > android/key.properties <<EOF
+          storePassword=$KEYSTORE_PASSWORD
+          keyPassword=$KEY_PASSWORD
+          keyAlias=$KEY_ALIAS
+          storeFile=app/arena-upload-key.jks
+          EOF
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          gradle = Path("android/app/build.gradle")
+          source = gradle.read_text()
+          if "signingConfigs {" not in source:
+              source = source.replace("android {", """def keystoreProperties = new Properties()
+          def keystorePropertiesFile = rootProject.file('key.properties')
+          keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+
+          android {
+              signingConfigs {
+                  release {
+                      keyAlias keystoreProperties['keyAlias']
+                      keyPassword keystoreProperties['keyPassword']
+                      storeFile file(keystoreProperties['storeFile'])
+                      storePassword keystoreProperties['storePassword']
+                  }
+              }
+          """, 1)
+          source = source.replace("signingConfig signingConfigs.debug", "signingConfig signingConfigs.release")
+          gradle.write_text(source)
+          manifest = Path("android/app/src/main/AndroidManifest.xml")
+          xml = manifest.read_text()
+          if "REQUEST_INSTALL_PACKAGES" not in xml:
+              xml = xml.replace("<manifest", '<manifest', 1)
+              xml = re.sub(r'(<manifest[^>]*>)', r'\\1\\n    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>', xml, count=1)
+          manifest.write_text(xml)
+          PY
+          flutter clean
+          flutter pub get
+          flutter build apk --release --target-platform android-arm64
+      - name: Verify signed APK
+        working-directory: apps/mobile
+        run: |
+          APK=build/app/outputs/flutter-apk/app-release.apk
+          test -s "$APK"
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)
+          "$APKSIGNER" verify --verbose "$APK"
+          unzip -t "$APK"
+          mkdir -p ../../release-output
+          cp "$APK" ../../release-output/arena360.apk
+      - name: Read app version
+        id: appver
+        run: |
+          VERSION=$(sed -n "s/^version: *//p" apps/mobile/pubspec.yaml | head -n1)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=arena360-$VERSION" >> "$GITHUB_OUTPUT"
+      - name: Publish stable APK release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.appver.outputs.tag }}
+          name: ARENA 360 ${{ steps.appver.outputs.version }}
+          target_commitish: main
+          files: release-output/arena360.apk
+          generate_release_notes: true
