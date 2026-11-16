@@ -69,7 +69,7 @@ jobs:
           xml = manifest.read_text()
           if "REQUEST_INSTALL_PACKAGES" not in xml:
               xml = xml.replace("<manifest", '<manifest', 1)
-              xml = re.sub(r'(<manifest[^>]*>)', r'\\1\\n    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>', xml, count=1)
+              xml = re.sub(r'(<manifest[^>]*>)', r'\1\n    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>', xml, count=1)
           manifest.write_text(xml)
           PY
           flutter clean
