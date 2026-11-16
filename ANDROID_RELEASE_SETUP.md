@@ -12,21 +12,15 @@ keytool -genkeypair -v -keystore arena-upload-key.jks -keyalg RSA -keysize 2048 
 
 Choose and retain the keystore password and key password. Do not lose this file: without it, future updates cannot replace the installed app.
 
-## 2. Add four GitHub Actions repository secrets
+## 2. Add one GitHub Actions repository secret
 
-Convert the keystore file to one-line Base64:
+Open **Settings → Secrets and variables → Actions → New repository secret** in this repository and create only this secret:
 
-- macOS/Linux: `base64 -w 0 arena-upload-key.jks`
-- Windows PowerShell: `[Convert]::ToBase64String([IO.File]::ReadAllBytes("arena-upload-key.jks"))`
+- **Name:** `ARENA_SIGNING_CONFIG`
+- **Secret:** paste the complete contents of the private `GITHUB_ACTIONS_SECRETS.txt` file, including all four key/value entries.
 
-Open **Settings → Secrets and variables → Actions → New repository secret** in this repository and create:
+The workflow extracts the four signing values during the build. Do not paste this content into issues, chat, source files, or commits. Keep the ZIP and keystore in a private backup.
 
-- `ARENA_KEYSTORE_BASE64` — the complete Base64 output
-- `ARENA_KEYSTORE_PASSWORD` — keystore password
-- `ARENA_KEY_ALIAS` — `arena360`
-- `ARENA_KEY_PASSWORD` — key password
-
-Do not paste passwords or Base64 key data into issues, chat, source files, or commits. Keep a private backup of the keystore.
 
 ## 3. Publish the first installable baseline
 
