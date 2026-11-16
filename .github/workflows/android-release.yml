@@ -16,24 +16,37 @@ jobs:
         with:
           flutter-version: '3.24.5'
           channel: stable
-      - name: Check signing secrets
+      - name: Load signing configuration
         env:
-          KEYSTORE_BASE64: ${{ secrets.ARENA_KEYSTORE_BASE64 }}
-          KEYSTORE_PASSWORD: ${{ secrets.ARENA_KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.ARENA_KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.ARENA_KEY_PASSWORD }}
+          ARENA_SIGNING_CONFIG: ${{ secrets.ARENA_SIGNING_CONFIG }}
         run: |
-          test -n "$KEYSTORE_BASE64" || (echo "Missing ARENA_KEYSTORE_BASE64 secret" && exit 1)
-          test -n "$KEYSTORE_PASSWORD" || (echo "Missing ARENA_KEYSTORE_PASSWORD secret" && exit 1)
-          test -n "$KEY_ALIAS" || (echo "Missing ARENA_KEY_ALIAS secret" && exit 1)
-          test -n "$KEY_PASSWORD" || (echo "Missing ARENA_KEY_PASSWORD secret" && exit 1)
+          python3 - <<'PY'
+          import os, re
+          from pathlib import Path
+          raw = os.environ.get("ARENA_SIGNING_CONFIG", "")
+          if not raw.strip():
+              raise SystemExit("Missing ARENA_SIGNING_CONFIG repository secret")
+          names = ["ARENA_KEYSTORE_BASE64", "ARENA_KEYSTORE_PASSWORD", "ARENA_KEY_ALIAS", "ARENA_KEY_PASSWORD"]
+          values = {}
+          for name in names:
+              patterns = [
+                  rf"(?im)^\\s*{name}\\s*=\\s*(\\S+)\\s*$",
+                  rf"(?ims)^\\s*{name}\\s*\\n\\s*Secret:\\s*(\\S+)",
+                  rf"(?im)^\\s*{name}\\s+Secret:\\s*(\\S+)\\s*$",
+              ]
+              for pattern in patterns:
+                  match = re.search(pattern, raw)
+                  if match:
+                      values[name] = match.group(1).strip()
+                      break
+              if name not in values:
+                  raise SystemExit(f"Could not read {name} from ARENA_SIGNING_CONFIG. Paste the complete GITHUB_ACTIONS_SECRETS.txt contents.")
+          with open(os.environ["GITHUB_ENV"], "a") as env:
+              for name, value in values.items():
+                  env.write(f"{name}={value}\\n")
+          PY
       - name: Generate Android project and configure signing
         working-directory: apps/mobile
-        env:
-          KEYSTORE_BASE64: ${{ secrets.ARENA_KEYSTORE_BASE64 }}
-          KEYSTORE_PASSWORD: ${{ secrets.ARENA_KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.ARENA_KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.ARENA_KEY_PASSWORD }}
         run: |
           flutter create --platforms=android --project-name arena360 --org mn.arena360 .
           echo "$KEYSTORE_BASE64" | base64 --decode > android/app/arena-upload-key.jks
