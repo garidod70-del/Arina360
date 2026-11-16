@@ -102,7 +102,7 @@ auth.MapPost("/register", async (
         string.IsNullOrWhiteSpace(request.Password))
         return Results.BadRequest(new { message = "Бүх талбарыг бөглөнө үү." });
 
-    var role = request.Role.Equals("Referee", StringComparison.OrdinalIgnoreCase)
+    var role = string.Equals(request.Role, "Referee", StringComparison.OrdinalIgnoreCase)
         ? "Referee" : "Organizer";
     var email = request.Email.Trim().ToLowerInvariant();
     if (await users.FindByEmailAsync(email) is not null)
