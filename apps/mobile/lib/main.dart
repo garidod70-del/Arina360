@@ -1,4 +1,11 @@
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:open_filex/open_filex.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 void main() => runApp(const Arena360App());
 
@@ -260,6 +267,13 @@ class HomePage extends StatelessWidget {
         title: const Text('ARENA 360'),
         actions: [
           IconButton(
+            tooltip: 'Шинэчлэлт шалгах',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const AppUpdatePage()),
+            ),
+            icon: const Icon(Icons.system_update_alt),
+          ),
+          IconButton(
             tooltip: 'Гарах',
             onPressed: () => Navigator.of(context).pushAndRemoveUntil(
               MaterialPageRoute(builder: (_) => const AuthPage()),
@@ -442,6 +456,139 @@ class ServicePage extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+
+class AppUpdatePage extends StatefulWidget {
+  const AppUpdatePage({super.key});
+  @override
+  State<AppUpdatePage> createState() => _AppUpdatePageState();
+}
+
+class _AppUpdatePageState extends State<AppUpdatePage> {
+  static final Uri manifestUri = Uri.parse('https://raw.githubusercontent.com/garidod70-del/Arina360/main/apps/mobile/version.json');
+  bool checking = false, downloading = false;
+  String status = 'Шинэ хувилбар байгаа эсэхийг шалгана уу.';
+  String? latestVersion, releaseNotes, apkUrl;
+  int? latestBuild;
+
+  @override
+  void initState() { super.initState(); checkUpdate(showCurrent: false); }
+
+  Future<void> checkUpdate({bool showCurrent = true}) async {
+    setState(() { checking = true; status = 'Шинэчлэлт шалгаж байна...'; });
+    try {
+      final response = await http.get(manifestUri).timeout(const Duration(seconds: 20));
+      if (response.statusCode != 200) throw Exception('Мэдээлэл татаж чадсангүй (' + response.statusCode.toString() + ').');
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final info = await PackageInfo.fromPlatform();
+      final installedBuild = int.tryParse(info.buildNumber) ?? 0;
+      final build = (data['buildNumber'] as num).toInt();
+      if (!mounted) return;
+      setState(() {
+        latestBuild = build;
+        latestVersion = data['version']?.toString() ?? '';
+        releaseNotes = data['releaseNotes']?.toString() ?? '';
+        apkUrl = data['apkUrl']?.toString();
+        status = build > installedBuild
+            ? 'Шинэ хувилбар бэлэн байна: ' + latestVersion!
+            : 'Таны ARENA 360 хамгийн сүүлийн хувилбар байна.';
+      });
+      if (build <= installedBuild && showCurrent && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Апп хамгийн сүүлийн хувилбартай байна.')));
+      }
+    } catch (e) {
+      if (mounted) setState(() => status = 'Шалгалт амжилтгүй: ' + e.toString());
+    } finally {
+      if (mounted) setState(() => checking = false);
+    }
+  }
+
+  Future<void> downloadAndInstall() async {
+    final url = apkUrl;
+    if (url == null || !url.startsWith('https://')) {
+      setState(() => status = 'Шинэ хувилбарын татах холбоос буруу байна.');
+      return;
+    }
+    setState(() { downloading = true; status = 'Шинэ хувилбарыг татаж байна...'; });
+    try {
+      final permission = await Permission.requestInstallPackages.request();
+      if (!permission.isGranted) {
+        if (mounted) setState(() => status = 'APK суулгах зөвшөөрөл шаардлагатай. ARENA 360-д зөвшөөрөл өгнө үү.');
+        await openAppSettings();
+        return;
+      }
+      final response = await http.get(Uri.parse(url)).timeout(const Duration(minutes: 3));
+      if (response.statusCode != 200 || response.bodyBytes.isEmpty) {
+        throw Exception('APK таталт амжилтгүй (' + response.statusCode.toString() + ').');
+      }
+      final dir = await getTemporaryDirectory();
+      final file = File(dir.path + '/arena360-update.apk');
+      await file.writeAsBytes(response.bodyBytes, flush: true);
+      if (!mounted) return;
+      setState(() => status = 'Таталт дууслаа. Android суулгагч нээгдэж байна...');
+      final result = await OpenFilex.open(file.path, type: 'application/vnd.android.package-archive');
+      if (mounted && result.type != ResultType.done) {
+        setState(() => status = 'Суулгагч нээгдсэнгүй: ' + result.message);
+      }
+    } catch (e) {
+      if (mounted) setState(() => status = 'Шинэчлэлт амжилтгүй: ' + e.toString());
+    } finally {
+      if (mounted) setState(() => downloading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hasUpdate = latestBuild != null && latestVersion != null && latestBuild! > 0 && apkUrl != null;
+    return Scaffold(
+      appBar: AppBar(title: const Text('ARENA 360 шинэчлэлт')),
+      body: ListView(padding: const EdgeInsets.all(20), children: [
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(gradient: const LinearGradient(colors: [navy, Color(0xFF244B91)]), borderRadius: BorderRadius.circular(18)),
+          child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Icon(Icons.system_update_alt, color: Colors.white, size: 38),
+            SizedBox(height: 12),
+            Text('ARENA 360 UPDATE', style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900)),
+            SizedBox(height: 6),
+            Text('Шинэ хувилбарыг шалгаж, утсан дээрээ шинэчлээрэй.', style: TextStyle(color: Colors.white70)),
+          ]),
+        ),
+        const SizedBox(height: 20),
+        FutureBuilder<PackageInfo>(
+          future: PackageInfo.fromPlatform(),
+          builder: (context, snapshot) => Text(
+            snapshot.hasData ? 'Суулгасан хувилбар: ' + snapshot.data!.version + ' (' + snapshot.data!.buildNumber + ')' : 'Суулгасан хувилбарыг уншиж байна...',
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
+        ),
+        const SizedBox(height: 14),
+        Text(status, style: const TextStyle(fontSize: 15)),
+        if ((releaseNotes ?? '').isNotEmpty) ...[
+          const SizedBox(height: 12),
+          const Text('Шинэ хувилбарын өөрчлөлт', style: TextStyle(fontWeight: FontWeight.bold)),
+          Text(releaseNotes!),
+        ],
+        const SizedBox(height: 22),
+        if (checking || downloading) const LinearProgressIndicator(),
+        const SizedBox(height: 12),
+        if (hasUpdate) FilledButton.icon(
+          onPressed: downloading ? null : downloadAndInstall,
+          icon: const Icon(Icons.download),
+          label: const Text('ШИНЭЧЛЭХ'),
+          style: FilledButton.styleFrom(backgroundColor: blue, padding: const EdgeInsets.symmetric(vertical: 15)),
+        ),
+        OutlinedButton.icon(
+          onPressed: checking ? null : () => checkUpdate(),
+          icon: const Icon(Icons.refresh),
+          label: const Text('Дахин шалгах'),
+        ),
+        const SizedBox(height: 10),
+        const Text('Шинэчлэлт суулгах үед Android-ийн баталгаажуулах цонх гарна. Шинэ хувилбар ижил гарын үсгээр гарсан байх шаардлагатай.', style: TextStyle(fontSize: 12, color: Colors.blueGrey)),
+      ]),
     );
   }
 }
