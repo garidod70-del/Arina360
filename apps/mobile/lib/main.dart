@@ -15,7 +15,7 @@ class AuthPage extends StatefulWidget{const AuthPage({super.key});@override Stat
 class _AuthPageState extends State<AuthPage>{
  final form=GlobalKey<FormState>();final phone=TextEditingController(),pass=TextEditingController(),repeat=TextEditingController();bool register=true,showPass=false,accepted=false;
  @override void dispose(){phone.dispose();pass.dispose();repeat.dispose();super.dispose();}
- String? phoneCheck(String? v)=>RegExp(r'^\d{8}).hasMatch((v??'').trim())?null:'8 оронтой утасны дугаар оруулна уу';
+ String? phoneCheck(String? v)=>RegExp(r'^\d{8}$').hasMatch((v??'').trim())?null:'8 оронтой утасны дугаар оруулна уу';
  void submit(){if(!form.currentState!.validate())return;if(register&&!accepted){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Үйлчилгээний нөхцөлийг зөвшөөрнө үү')));return;}Navigator.pushReplacement(context,MaterialPageRoute(builder:(_)=>HomePage(phone:phone.text)));}
  @override Widget build(BuildContext c)=>Scaffold(body:SafeArea(child:Center(child:SingleChildScrollView(padding:const EdgeInsets.all(24),child:ConstrainedBox(constraints:const BoxConstraints(maxWidth:440),child:Form(key:form,child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
  Container(height:76,width:76,alignment:Alignment.center,decoration:BoxDecoration(color:navy,borderRadius:BorderRadius.circular(22)),child:const Icon(Icons.sports_martial_arts,color:Colors.white,size:42)),
