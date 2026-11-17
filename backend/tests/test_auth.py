@@ -1,11 +1,18 @@
+import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
 
-client = TestClient(app)
+
+@pytest.fixture(scope="module")
+def client():
+    with TestClient(app) as test_client:
+        yield test_client
+
+
 TEST_PASSWORD = "test-password-for-ci-only"
 
-def test_register_login_and_authenticated_profile():
+def test_register_login_and_authenticated_profile(client):
     phone = "+97699123456"
     payload = {"phone": phone, "password": TEST_PASSWORD}
     registered = client.post("/api/v1/auth/register", json=payload)
@@ -22,12 +29,12 @@ def test_register_login_and_authenticated_profile():
     assert logged_in.status_code == 200
     assert logged_in.json()["token_type"] == "bearer"
 
-def test_duplicate_registration_is_rejected():
+def test_duplicate_registration_is_rejected(client):
     payload = {"phone": "+97699123457", "password": TEST_PASSWORD}
     assert client.post("/api/v1/auth/register", json=payload).status_code == 201
     assert client.post("/api/v1/auth/register", json=payload).status_code == 409
 
-def test_wrong_password_is_rejected():
+def test_wrong_password_is_rejected(client):
     phone = "+97699123458"
     client.post("/api/v1/auth/register", json={"phone": phone, "password": TEST_PASSWORD})
     response = client.post("/api/v1/auth/login", json={"phone": phone, "password": "not-the-test-password"})
