@@ -8,6 +8,11 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'core/config/api_config.dart';
+import 'core/network/api_client.dart';
+import 'features/auth/data/auth_repository.dart';
+import 'features/auth/domain/auth_session.dart';
+
 void main() => runApp(const Arena360App());
 
 const navy = Color(0xFF101B36);
@@ -80,6 +85,7 @@ class _AuthPageState extends State<AuthPage> {
   final _password = TextEditingController();
   bool _isRegister = false;
   bool _showPassword = false;
+  bool _isSubmitting = false;
 
   @override
   void dispose() {
@@ -94,13 +100,58 @@ class _AuthPageState extends State<AuthPage> {
         : 'Утасны дугаар оруулна уу';
   }
 
-  void _submit() {
-    if (!_formKey.currentState!.validate()) return;
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (_) => HomePage(phone: _phone.text.trim()),
-      ),
-    );
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate() || _isSubmitting) return;
+
+    if (!ApiConfig.isConfigured) {
+      // Keeps the existing prototype usable until the API is deployed.
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => HomePage(phone: _phone.text.trim()),
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+    final api = ApiClient();
+    try {
+      final repository = AuthRepository(api);
+      final response = _isRegister
+          ? await repository.register(
+              phone: _phone.text.trim(),
+              password: _password.text,
+            )
+          : await repository.login(
+              phone: _phone.text.trim(),
+              password: _password.text,
+            );
+      final session = AuthSession.fromJson(response);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('arena_access_token', session.accessToken);
+      await prefs.setStringList('arena_user_roles', session.roles);
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => HomePage(phone: session.phone),
+        ),
+      );
+    } on ApiException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.message)),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Сервертэй холбогдож чадсангүй. Дахин оролдоно уу.')),
+        );
+      }
+    } finally {
+      api.close();
+      if (mounted) setState(() => _isSubmitting = false);
+    }
   }
 
   @override
@@ -193,8 +244,14 @@ class _AuthPageState extends State<AuthPage> {
                       height: 52,
                       child: FilledButton(
                         style: FilledButton.styleFrom(backgroundColor: blue),
-                        onPressed: _submit,
-                        child: Text(_isRegister ? 'БҮРТГҮҮЛЭХ' : 'НЭВТРЭХ'),
+                        onPressed: _isSubmitting ? null : _submit,
+                        child: _isSubmitting
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : Text(_isRegister ? 'БҮРТГҮҮЛЭХ' : 'НЭВТРЭХ'),
                       ),
                     ),
                     TextButton(
@@ -208,10 +265,12 @@ class _AuthPageState extends State<AuthPage> {
                             : 'Шинэ хэрэглэгч үү? Бүртгүүлэх',
                       ),
                     ),
-                    const Text(
-                      'Туршилтын горим: дурын утасны дугаар, нууц үгээр бүртгүүлж эсвэл шууд нэвтэрнэ. Серверийн баталгаажуулалт холбогдоогүй.',
+                    Text(
+                      ApiConfig.isConfigured
+                          ? 'Нэгдсэн серверийн бүртгэл ашиглаж байна.'
+                          : 'Туршилтын горим: серверийн хаяг тохируулах хүртэл нэвтрэлт төхөөрөмж дээр туршилтаар ажиллана.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 11, color: Colors.blueGrey),
+                      style: const TextStyle(fontSize: 11, color: Colors.blueGrey),
                     ),
                   ],
                 ),
