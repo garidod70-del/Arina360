@@ -119,21 +119,19 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
           'region': _regionController.text.trim(),
       };
 
-      final results = await Future.wait([
-        _api.getList(
-          '/services/providers?${Uri(queryParameters: query).query}',
-          token: token,
-        ),
-        _api.getList('/services/requests/me', token: token),
-        _api.get('/auth/me', token: token),
-      ]);
+      final providers = await _api.getList(
+        '/services/providers?${Uri(queryParameters: query).query}',
+        token: token,
+      );
+      final requests = await _api.getList('/services/requests/me', token: token);
+      final currentUser = await _api.get('/auth/me', token: token);
 
       if (!mounted) return;
 
       setState(() {
-        _providers = results[0];
-        _requests = results[1];
-        _currentUserId = results[2]['id'] as int?;
+        _providers = providers;
+        _requests = requests;
+        _currentUserId = currentUser['id'] as int?;
       });
     } catch (error) {
       if (mounted) {
