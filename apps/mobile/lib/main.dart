@@ -15,6 +15,7 @@ import 'features/auth/data/auth_repository.dart';
 import 'features/auth/domain/auth_session.dart';
 import 'features/services/domain/service_item.dart';
 import 'features/referees/referee_booking_page.dart';
+import 'features/admin/admin_referee_page.dart';
 
 void main() => runApp(const Arena360App());
 
@@ -116,7 +117,7 @@ class _AuthPageState extends State<AuthPage> {
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (_) => HomePage(phone: session.phone),
+          builder: (_) => HomePage(phone: session.phone, roles: session.roles),
         ),
       );
     } on ApiException catch (error) {
@@ -268,7 +269,8 @@ class _AuthPageState extends State<AuthPage> {
 
 class HomePage extends StatefulWidget {
   final String phone;
-  const HomePage({super.key, required this.phone});
+  final List<String> roles;
+  const HomePage({super.key, required this.phone, this.roles = const []});
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -325,6 +327,14 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         title: const Text('ARENA 360'),
         actions: [
+          if (widget.roles.contains('admin'))
+            IconButton(
+              tooltip: 'Админ • Шүүгчийн лиценз',
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const AdminRefereePage()),
+              ),
+              icon: const Icon(Icons.admin_panel_settings_outlined),
+            ),
           IconButton(
             tooltip: 'Миний профайл',
             onPressed: () => Navigator.of(context).push(
