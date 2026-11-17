@@ -17,6 +17,7 @@ import 'features/services/domain/service_item.dart';
 import 'features/services/presentation/service_marketplace_page.dart';
 import 'features/referees/referee_booking_page.dart';
 import 'features/admin/admin_referee_page.dart';
+import 'features/admin/admin_service_providers_page.dart';
 
 void main() => runApp(const Arena360App());
 
@@ -335,6 +336,14 @@ class _HomePageState extends State<HomePage> {
                 MaterialPageRoute(builder: (_) => const AdminRefereePage()),
               ),
               icon: const Icon(Icons.admin_panel_settings_outlined),
+            ),
+          if (widget.roles.contains('admin'))
+            IconButton(
+              tooltip: 'Админ • Үйлчилгээний баталгаажуулалт',
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const AdminServiceProvidersPage()),
+              ),
+              icon: const Icon(Icons.fact_check_outlined),
             ),
           IconButton(
             tooltip: 'Миний профайл',
