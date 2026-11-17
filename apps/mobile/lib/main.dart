@@ -15,6 +15,7 @@ import 'features/auth/data/auth_repository.dart';
 import 'features/auth/domain/auth_session.dart';
 import 'features/services/domain/service_item.dart';
 import 'features/services/presentation/service_marketplace_page.dart';
+import 'features/services/presentation/venue_booking_page.dart';
 import 'features/referees/referee_booking_page.dart';
 import 'features/admin/admin_referee_page.dart';
 import 'features/admin/admin_service_providers_page.dart';
@@ -435,7 +436,9 @@ class _HomePageState extends State<HomePage> {
                   MaterialPageRoute(
                     builder: (_) => index == 0
                         ? const ApiRefereeBookingPage()
-                        : ServiceMarketplacePage(service: service),
+                        : index == 8
+                            ? const VenueBookingPage()
+                            : ServiceMarketplacePage(service: service),
                   ),
                 ),
                 child: Container(
