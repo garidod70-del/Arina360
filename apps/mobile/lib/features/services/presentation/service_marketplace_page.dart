@@ -55,6 +55,48 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
 
   String get _category => _categorySlugs[widget.service.name] ?? 'coach';
 
+  static const Map<String, List<String>> _requestExtraFields = {
+    'coach': ['Тамирчны насны ангилал', 'Бэлтгэлийн зорилго', '7 хоногт бэлтгэл хийх давтамж', 'Ганцаарчилсан эсвэл багийн бэлтгэл'],
+    'sports_doctor': ['Үзлэгийн төрөл', 'Цаг авах хэлбэр (биеэр / цахим)', 'Хүссэн үзлэгийн өдөр'],
+    'strength_specialist': ['Хөгжүүлэх чадвар (хүч / хурд / тэсрэлт)', 'Тамирчны түвшин', 'Бэлтгэлийн орчин'],
+    'sports_psychologist': ['Уулзалтын хэлбэр (биеэр / цахим)', 'Уулзалтын боломжит давтамж'],
+    'sports_nutritionist': ['Спортын төрөл, жингийн ангилал', 'Зорилго (жин барих / тэмцээнд бэлтгэх / ерөнхий хооллолт)', 'Хооллолтын зөвлөгөөний хэлбэр'],
+    'physiotherapist': ['Үйлчилгээний төрөл', 'Сэргээн засах уулзалтын хэлбэр', 'Хүссэн уулзалтын давтамж'],
+    'sports_analyst': ['Тамирчин эсвэл багийн нэр', 'Шинжилгээний төрөл (техник / тактик / статистик)', 'Видео эсвэл материал байгаа эсэх'],
+    'sports_store': ['Барааны нэр / загвар', 'Хэмжээ / өнгө', 'Тоо ширхэг', 'Хүргэлтийн байршил'],
+    'clubs_training': ['Насны ангилал', 'Бэлтгэлийн түвшин (анхан / дунд / ахисан)', 'Сонирхож буй хуваарь'],
+  };
+
+  static const Map<String, List<String>> _providerExtraFields = {
+    'coach': ['Заадаг насны ангилал', 'Бэлтгэлийн чиглэл', 'Бэлтгэлийн хуваарь'],
+    'sports_doctor': ['Мэргэшил', 'Үзлэгийн чиглэл', 'Цаг авах боломж'],
+    'strength_specialist': ['Үнэлгээ, тестийн чиглэл', 'Ашиглах тоног төхөөрөмж', 'Хөтөлбөрийн төрөл'],
+    'sports_psychologist': ['Мэргэшлийн чиглэл', 'Зөвлөгөөний хэлбэр', 'Ажиллах цагийн хуваарь'],
+    'sports_nutritionist': ['Спортын хоол зүйн чиглэл', 'Зөвлөгөөний хэлбэр', 'Хяналт, дагалтын боломж'],
+    'physiotherapist': ['Нөхөн сэргээх чиглэл', 'Ашиглах арга, тоноглол', 'Сеанс үргэлжлэх хугацаа'],
+    'sports_analyst': ['Шинжилгээний чиглэл', 'Ашиглах программ, аргачлал', 'Тайлангийн төрөл'],
+    'sports_store': ['Барааны ангилал', 'Брэнд / нийлүүлэлт', 'Хүргэлт, солилцооны нөхцөл'],
+    'clubs_training': ['Насны ангилал', 'Сургалтын түвшин', 'Долоо хоногийн хуваарь', 'Элсэлтийн нөхцөл'],
+  };
+
+  List<String> get _requestFields => _requestExtraFields[_category] ?? const [];
+  List<String> get _providerFields => _providerExtraFields[_category] ?? const [];
+
+  String get _moduleWorkflow {
+    switch (_category) {
+      case 'coach': return 'Дасгалжуулагчийн профайл • бэлтгэлийн чиглэл • насны ангилал • хувийн болон багийн хүсэлт';
+      case 'sports_doctor': return 'Эмчийн мэргэшил • үзлэгийн цаг хүсэх • цаг баталгаажуулах • үйлчилгээний түүх';
+      case 'strength_specialist': return 'Хүчний үнэлгээ • бэлтгэлийн чиглэл • хөтөлбөрийн хүсэлт • ахицын хяналт';
+      case 'sports_psychologist': return 'Мэргэжлийн профайл • нууцлалтай цаг хүсэх • уулзалтын хуваарь';
+      case 'sports_nutritionist': return 'Хоол зүйн профайл • зорилгын үнэлгээ • зөвлөгөөний хүсэлт • дагалт';
+      case 'physiotherapist': return 'Нөхөн сэргээх чиглэл • үзлэгийн хүсэлт • сеансын хуваарь • явцын хяналт';
+      case 'sports_analyst': return 'Тамирчин, багийн шинжилгээ • статистик • видео материал • тайлангийн хүсэлт';
+      case 'sports_store': return 'Барааны төрөл • хэмжээ, тоо ширхэг • захиалгын хүсэлт • хүргэлтийн мэдээлэл';
+      case 'clubs_training': return 'Клубын профайл • насны ангилал • сургалтын хуваарь • элсэлтийн хүсэлт';
+      default: return widget.service.description;
+    }
+  }
+
   String get _requestTitleLabel {
     switch (_category) {
       case 'venue_booking':
@@ -156,6 +198,7 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
     final region = TextEditingController(text: _regionController.text.trim());
     final phone = TextEditingController();
     final preferredDate = TextEditingController();
+    final extraValues = {for (final label in _requestFields) label: TextEditingController()};
 
     final submitted = await showDialog<bool>(
       context: context,
@@ -189,6 +232,13 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
                         ? 'Хүсэлтээ дэлгэрэнгүй бичнэ үү.'
                         : null,
                   ),
+                  ...extraValues.entries.map((entry) => Padding(
+                    padding: const EdgeInsets.only(top: 10),
+                    child: TextFormField(
+                      controller: entry.value,
+                      decoration: InputDecoration(labelText: entry.key),
+                    ),
+                  )),
                   const SizedBox(height: 10),
                   TextFormField(
                     controller: sport,
@@ -252,7 +302,11 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
       await _createRequest(
         provider: provider,
         title: title.text.trim(),
-        details: details.text.trim(),
+        details: [
+          details.text.trim(),
+          ...extraValues.entries.where((entry) => entry.value.text.trim().isNotEmpty)
+              .map((entry) => '${entry.key}: ${entry.value.text.trim()}'),
+        ].join('\\n'),
         sport: sport.text.trim(),
         region: region.text.trim(),
         phone: phone.text.trim(),
@@ -266,6 +320,7 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
     region.dispose();
     phone.dispose();
     preferredDate.dispose();
+    for (final controller in extraValues.values) { controller.dispose(); }
   }
 
   Future<void> _createRequest({
@@ -331,6 +386,7 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
     final region = TextEditingController();
     final price = TextEditingController(text: '0');
     final credentials = TextEditingController();
+    final extraValues = {for (final label in _providerFields) label: TextEditingController()};
 
     final submitted = await showDialog<bool>(
       context: context,
@@ -387,6 +443,13 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
                       return null;
                     },
                   ),
+                  ...extraValues.entries.map((entry) => Padding(
+                    padding: const EdgeInsets.only(top: 10),
+                    child: TextFormField(
+                      controller: entry.value,
+                      decoration: InputDecoration(labelText: entry.key),
+                    ),
+                  )),
                   const SizedBox(height: 10),
                   TextFormField(
                     controller: credentials,
@@ -423,7 +486,11 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
         sport: sport.text.trim(),
         region: region.text.trim(),
         price: int.parse(price.text.trim()),
-        credentials: credentials.text.trim(),
+        credentials: [
+          credentials.text.trim(),
+          ...extraValues.entries.where((entry) => entry.value.text.trim().isNotEmpty)
+              .map((entry) => '${entry.key}: ${entry.value.text.trim()}'),
+        ].where((value) => value.trim().isNotEmpty).join(' | '),
       );
     }
 
@@ -433,6 +500,7 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
     region.dispose();
     price.dispose();
     credentials.dispose();
+    for (final controller in extraValues.values) { controller.dispose(); }
   }
 
   Future<void> _saveProvider({
@@ -796,7 +864,7 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    widget.service.description,
+                    _moduleWorkflow,
                     style: const TextStyle(color: Colors.white70),
                   ),
                 ],
