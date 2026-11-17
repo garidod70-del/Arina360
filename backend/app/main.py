@@ -7,6 +7,7 @@ from app.config import get_settings
 from app.database import Base, engine
 from app import models  # noqa: F401
 from app.routers.auth import router as auth_router
+from app.routers.profile import router as profile_router
 
 settings = get_settings()
 
@@ -20,7 +21,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="ARENA 360 API",
-    version="0.1.0",
+    version="0.2.0",
     description="Нэгдсэн спортын үйлчилгээний API",
     lifespan=lifespan,
 )
@@ -32,6 +33,7 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type"],
 )
 app.include_router(auth_router, prefix="/api/v1")
+app.include_router(profile_router, prefix="/api/v1")
 
 
 @app.get("/health", tags=["system"])
