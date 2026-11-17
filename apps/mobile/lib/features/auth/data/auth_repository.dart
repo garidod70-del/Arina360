@@ -25,6 +25,27 @@ class AuthRepository {
     });
   }
 
+  Future<Map<String, dynamic>> getProfile(String token) {
+    return _api.get('/profile/me', token: token);
+  }
+
+  Future<Map<String, dynamic>> saveProfile({
+    required String token,
+    required String fullName,
+    String? sport,
+    String? region,
+  }) {
+    return _api.put(
+      '/profile/me',
+      token: token,
+      body: {
+        'full_name': fullName,
+        'sport': sport,
+        'region': region,
+      },
+    );
+  }
+
   Future<Map<String, dynamic>> currentUser(String token) {
     return _api.get('/auth/me', token: token);
   }
