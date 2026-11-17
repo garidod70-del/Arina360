@@ -9,12 +9,26 @@ class Settings(BaseSettings):
     jwt_expire_minutes: int = 60
     auto_create_tables: bool = True
     cors_origins: str = "http://localhost:3000"
+    admin_bootstrap_key: str = ""
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     @property
+    def sqlalchemy_database_url(self) -> str:
+        # Render provides postgres:// or postgresql://; use the installed psycopg v3 driver.
+        if self.database_url.startswith("postgres://"):
+            return self.database_url.replace("postgres://", "postgresql+psycopg://", 1)
+        if self.database_url.startswith("postgresql://"):
+            return self.database_url.replace("postgresql://", "postgresql+psycopg://", 1)
+        return self.database_url
+
+    @property
     def cors_origin_list(self) -> list[str]:
         return [item.strip() for item in self.cors_origins.split(",") if item.strip()]
+
+    @lru_cache
+    def _unused(self):
+        return None
 
 
 @lru_cache
