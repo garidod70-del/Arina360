@@ -106,12 +106,16 @@ def list_service_providers(
 
 @router.get("/providers/me", response_model=ServiceProviderOutput)
 def get_my_service_provider(
+    category: str = Query(min_length=2, max_length=60),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    item = db.query(ServiceProvider).filter(ServiceProvider.user_id == user.id).first()
+    item = db.query(ServiceProvider).filter(
+        ServiceProvider.user_id == user.id,
+        ServiceProvider.category == category,
+    ).first()
     if item is None:
-        raise HTTPException(status_code=404, detail="Үйлчилгээ үзүүлэгчийн профайл бүртгэгдээгүй байна.")
+        raise HTTPException(status_code=404, detail="Энэ төрлийн үйлчилгээ үзүүлэгчийн профайл бүртгэгдээгүй байна.")
     return _provider_output(item)
 
 
@@ -121,7 +125,10 @@ def save_my_service_provider(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    item = db.query(ServiceProvider).filter(ServiceProvider.user_id == user.id).first()
+    item = db.query(ServiceProvider).filter(
+        ServiceProvider.user_id == user.id,
+        ServiceProvider.category == payload.category,
+    ).first()
     if item is None:
         item = ServiceProvider(user_id=user.id, **payload.model_dump(), verification_status="pending")
         db.add(item)
@@ -138,16 +145,16 @@ def save_my_service_provider(
     return _provider_output(item)
 
 
-@router.post("/providers/{provider_user_id}/verify", response_model=ServiceProviderOutput)
+@router.post("/providers/{provider_id}/verify", response_model=ServiceProviderOutput)
 def verify_service_provider(
-    provider_user_id: int,
+    provider_id: int,
     payload: ServiceVerificationInput,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     if not _is_admin(user):
         raise HTTPException(status_code=403, detail="Зөвхөн админ үйлчилгээ үзүүлэгчийг баталгаажуулна.")
-    item = db.query(ServiceProvider).filter(ServiceProvider.user_id == provider_user_id).first()
+    item = db.query(ServiceProvider).filter(ServiceProvider.id == provider_id).first()
     if item is None:
         raise HTTPException(status_code=404, detail="Үйлчилгээ үзүүлэгч олдсонгүй.")
     item.verification_status = "verified" if payload.approved else "rejected"
