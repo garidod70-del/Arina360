@@ -9,6 +9,15 @@ from app.schemas import UserProfileRequest, UserProfileResponse
 router = APIRouter(prefix="/profile", tags=["user profile"])
 
 
+def _profile_response(profile: UserProfile) -> UserProfileResponse:
+    return UserProfileResponse(
+        full_name=profile.full_name,
+        sport=profile.sport,
+        region=profile.region,
+        updated_at=profile.updated_at,
+    )
+
+
 @router.get("/me", response_model=UserProfileResponse)
 def get_my_profile(user: User = Depends(get_current_user)):
     if user.profile is None:
@@ -16,7 +25,7 @@ def get_my_profile(user: User = Depends(get_current_user)):
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Профайлын мэдээлэл хараахан бүртгэгдээгүй байна.",
         )
-    return user.profile
+    return _profile_response(user.profile)
 
 
 @router.put("/me", response_model=UserProfileResponse)
@@ -39,4 +48,4 @@ def save_my_profile(
     profile.region = payload.region
     db.commit()
     db.refresh(profile)
-    return profile
+    return _profile_response(profile)
