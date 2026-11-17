@@ -7,6 +7,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'core/config/api_config.dart';
 import 'core/network/api_client.dart';
@@ -60,6 +61,7 @@ class AuthPage extends StatefulWidget {
 }
 
 class _AuthPageState extends State<AuthPage> {
+  static const _secureStorage = FlutterSecureStorage();
   final _formKey = GlobalKey<FormState>();
   final _phone = TextEditingController();
   final _password = TextEditingController();
@@ -108,7 +110,7 @@ class _AuthPageState extends State<AuthPage> {
             );
       final session = AuthSession.fromJson(response);
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('arena_access_token', session.accessToken);
+      await _secureStorage.write(key: 'arena_access_token', value: session.accessToken);
       await prefs.setStringList('arena_user_roles', session.roles);
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
@@ -342,7 +344,7 @@ class _HomePageState extends State<HomePage> {
             tooltip: 'Гарах',
             onPressed: () async {
               final prefs = await SharedPreferences.getInstance();
-              await prefs.remove('arena_access_token');
+              await const FlutterSecureStorage().delete(key: 'arena_access_token');
               await prefs.remove('arena_user_roles');
               if (!context.mounted) return;
               Navigator.of(context).pushAndRemoveUntil(
