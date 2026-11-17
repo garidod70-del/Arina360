@@ -18,7 +18,11 @@ class RefereeProfileOutput(BaseModel):
     region: str
     bio: str | None
     base_fee: int
+    license_number: str | None = None
+    license_issuer: str | None = None
+    license_expires_at: datetime | None = None
     verification_status: str
+    verified_at: datetime | None = None
     average_rating: float | None = None
     rating_count: int = 0
 
