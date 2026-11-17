@@ -45,6 +45,8 @@ def _profile_out(db: Session, profile: RefereeProfile) -> RefereeProfileOutput:
     return RefereeProfileOutput(
         user_id=profile.user_id, full_name=full_name, sport=profile.sport, rank=profile.rank,
         region=profile.region, bio=profile.bio, base_fee=profile.base_fee,
+        license_number=profile.license_number, license_issuer=profile.license_issuer,
+        license_expires_at=profile.license_expires_at, verified_at=profile.verified_at,
         verification_status=profile.verification_status,
         average_rating=round(float(avg), 2) if avg is not None else None, rating_count=count or 0,
     )
