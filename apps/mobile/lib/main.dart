@@ -14,6 +14,7 @@ import 'core/network/api_client.dart';
 import 'features/auth/data/auth_repository.dart';
 import 'features/auth/domain/auth_session.dart';
 import 'features/services/domain/service_item.dart';
+import 'features/services/presentation/service_marketplace_page.dart';
 import 'features/referees/referee_booking_page.dart';
 import 'features/admin/admin_referee_page.dart';
 
@@ -423,7 +424,9 @@ class _HomePageState extends State<HomePage> {
                 borderRadius: BorderRadius.circular(16),
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) => index == 0 ? const ApiRefereeBookingPage() : ServicePage(service: service),
+                    builder: (_) => index == 0
+                        ? const ApiRefereeBookingPage()
+                        : ServiceMarketplacePage(service: service),
                   ),
                 ),
                 child: Container(
