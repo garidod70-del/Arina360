@@ -78,16 +78,13 @@ class _AuthPageState extends State<AuthPage> {
   final _formKey = GlobalKey<FormState>();
   final _phone = TextEditingController();
   final _password = TextEditingController();
-  final _repeatPassword = TextEditingController();
   bool _isRegister = false;
   bool _showPassword = false;
-  bool _acceptedTerms = false;
 
   @override
   void dispose() {
     _phone.dispose();
     _password.dispose();
-    _repeatPassword.dispose();
     super.dispose();
   }
 
@@ -99,12 +96,6 @@ class _AuthPageState extends State<AuthPage> {
 
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
-    if (_isRegister && !_acceptedTerms) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Үйлчилгээний нөхцөлийг зөвшөөрнө үү')),
-      );
-      return;
-    }
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
         builder: (_) => HomePage(phone: _phone.text.trim()),
@@ -167,7 +158,6 @@ class _AuthPageState extends State<AuthPage> {
                     TextFormField(
                       controller: _phone,
                       keyboardType: TextInputType.phone,
-                      maxLength: 8,
                       decoration: const InputDecoration(
                         labelText: 'Утасны дугаар',
                         prefixIcon: Icon(Icons.phone),
@@ -198,33 +188,6 @@ class _AuthPageState extends State<AuthPage> {
                               ? 'Нууц үг оруулна уу'
                               : null,
                     ),
-                    if (_isRegister) ...[
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _repeatPassword,
-                        obscureText: !_showPassword,
-                        decoration: const InputDecoration(
-                          labelText: 'Нууц үг давтах',
-                          prefixIcon: Icon(Icons.lock_reset),
-                        ),
-                        validator: (value) {
-                          if ((value ?? '').isEmpty) return 'Нууц үгээ давтана уу';
-                          if (value != _password.text) return 'Нууц үг таарахгүй байна';
-                          return null;
-                        },
-                      ),
-                      CheckboxListTile(
-                        contentPadding: EdgeInsets.zero,
-                        value: _acceptedTerms,
-                        onChanged: (value) =>
-                            setState(() => _acceptedTerms = value ?? false),
-                        controlAffinity: ListTileControlAffinity.leading,
-                        title: const Text(
-                          'Үйлчилгээний нөхцөлийг зөвшөөрөх',
-                          style: TextStyle(fontSize: 13),
-                        ),
-                      ),
-                    ],
                     const SizedBox(height: 16),
                     SizedBox(
                       height: 52,
@@ -246,7 +209,7 @@ class _AuthPageState extends State<AuthPage> {
                       ),
                     ),
                     const Text(
-                      'Туршилтын нэвтрэлт: дурын утасны дугаар болон хоосон биш нууц үгээр нэвтэрнэ. Серверийн баталгаажуулалт холбогдоогүй.',
+                      'Туршилтын горим: дурын утасны дугаар, нууц үгээр бүртгүүлж эсвэл шууд нэвтэрнэ. Серверийн баталгаажуулалт холбогдоогүй.',
                       textAlign: TextAlign.center,
                       style: TextStyle(fontSize: 11, color: Colors.blueGrey),
                     ),
