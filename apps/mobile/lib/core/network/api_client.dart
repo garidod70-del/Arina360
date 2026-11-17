@@ -139,5 +139,22 @@ class ApiClient {
     return decoded;
   }
 
+  Future<List<Map<String, dynamic>>> getList(String path, {required String token}) async {
+    if (!ApiConfig.isConfigured) {
+      throw const ApiException(0, 'Серверийн хаяг тохируулаагүй байна.');
+    }
+    final response = await _client
+        .get(
+          Uri.parse('$_baseUrl/api/v1$path'),
+          headers: {'Authorization': 'Bearer $token'},
+        )
+        .timeout(const Duration(seconds: 20));
+    final decoded = response.body.isEmpty ? <dynamic>[] : jsonDecode(response.body) as List<dynamic>;
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw ApiException(response.statusCode, 'Сервертэй холбогдоход алдаа гарлаа.');
+    }
+    return decoded.cast<Map<String, dynamic>>();
+  }
+
   void close() => _client.close();
 }
