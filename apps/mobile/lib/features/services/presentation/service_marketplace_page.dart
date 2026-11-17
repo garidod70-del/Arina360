@@ -482,15 +482,15 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
     if (submitted == true) {
       await _saveProvider(
         name: name.text.trim(),
-        description: description.text.trim(),
+        description: [
+          description.text.trim(),
+          ...extraValues.entries.where((entry) => entry.value.text.trim().isNotEmpty)
+              .map((entry) => '${entry.key}: ${entry.value.text.trim()}'),
+        ].join(' | '),
         sport: sport.text.trim(),
         region: region.text.trim(),
         price: int.parse(price.text.trim()),
-        credentials: [
-          credentials.text.trim(),
-          ...extraValues.entries.where((entry) => entry.value.text.trim().isNotEmpty)
-              .map((entry) => '${entry.key}: ${entry.value.text.trim()}'),
-        ].where((value) => value.trim().isNotEmpty).join(' | '),
+        credentials: credentials.text.trim(),
       );
     }
 
@@ -526,11 +526,7 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
         body: {
           'category': _category,
           'display_name': name,
-          'description': [
-            description,
-            ...extraValues.entries.where((entry) => entry.value.text.trim().isNotEmpty)
-                .map((entry) => '${entry.key}: ${entry.value.text.trim()}'),
-          ].join(' | '),
+          'description': description,
           'sport': sport.isEmpty ? null : sport,
           'region': region,
           'price_from': price,
