@@ -306,7 +306,7 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
           details.text.trim(),
           ...extraValues.entries.where((entry) => entry.value.text.trim().isNotEmpty)
               .map((entry) => '${entry.key}: ${entry.value.text.trim()}'),
-        ].join('\\n'),
+        ].join(' | '),
         sport: sport.text.trim(),
         region: region.text.trim(),
         phone: phone.text.trim(),
@@ -526,7 +526,11 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
         body: {
           'category': _category,
           'display_name': name,
-          'description': description,
+          'description': [
+            description,
+            ...extraValues.entries.where((entry) => entry.value.text.trim().isNotEmpty)
+                .map((entry) => '${entry.key}: ${entry.value.text.trim()}'),
+          ].join(' | '),
           'sport': sport.isEmpty ? null : sport,
           'region': region,
           'price_from': price,
