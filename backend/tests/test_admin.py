@@ -7,7 +7,7 @@ from app.main import app
 def test_bootstrap_admin_grants_and_verifies_referee(monkeypatch):
     monkeypatch.setattr(get_settings(), "admin_bootstrap_key", "test-bootstrap-key")
     with TestClient(app) as client:
-        phone = "+97699123991"
+        phone = "+97699123992"
         registered = client.post("/api/v1/auth/register", json={
             "phone": phone, "password": "secure-test-password"
         })
