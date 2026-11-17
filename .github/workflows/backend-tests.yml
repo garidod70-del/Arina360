@@ -4,11 +4,15 @@ on:
   pull_request:
     paths:
       - "backend/**"
+      - "apps/mobile/**"
+      - ".github/workflows/android-apk.yml"
       - ".github/workflows/backend-tests.yml"
   push:
     branches:
       - main
       - feature/backend-auth-foundation
+      - feature/phase1-profile-foundation
+      - feature/referee-booking-api
 
 jobs:
   backend-tests:
