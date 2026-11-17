@@ -39,3 +39,24 @@ class AuthResponse(BaseModel):
     token_type: str = "bearer"
     expires_in: int
     user: UserResponse
+
+
+class UserProfileRequest(BaseModel):
+    full_name: str = Field(min_length=1, max_length=120)
+    sport: str | None = Field(default=None, max_length=60)
+    region: str | None = Field(default=None, max_length=120)
+
+    @field_validator("full_name", "sport", "region")
+    @classmethod
+    def strip_text(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = value.strip()
+        return cleaned or None
+
+
+class UserProfileResponse(BaseModel):
+    full_name: str
+    sport: str | None
+    region: str | None
+    updated_at: datetime
