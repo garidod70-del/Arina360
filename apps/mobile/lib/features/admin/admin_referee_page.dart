@@ -131,7 +131,7 @@ class _AdminRefereePageState extends State<AdminRefereePage> {
           Text('Хэрэглэгчийн ID: $_userId', style: const TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           DropdownButtonFormField<bool>(
-            initialValue: _approved,
+            value: _approved,
             decoration: const InputDecoration(labelText: 'Лицензийн шийдвэр'),
             items: const [
               DropdownMenuItem(value: true, child: Text('Баталгаажуулах')),
