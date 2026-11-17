@@ -118,7 +118,8 @@ class _ApiRefereeBookingPageState extends State<ApiRefereeBookingPage> {
     setState(() { _busy = true; _error = null; });
     try {
       if (action == 'assign') {
-        final referee = _referees.where((r) => r['user_id'] == _selectedRefereeId && r['sport'].toString().toLowerCase() == (sport ?? _sport).toLowerCase()).firstOrNull;
+        final matches = _referees.where((r) => r['user_id'] == _selectedRefereeId && r['sport'].toString().toLowerCase() == (sport ?? _sport).toLowerCase()).toList();
+        final referee = matches.isEmpty ? null : matches.first;
         if (referee == null) throw const ApiException(404, 'Сонгосон спортын баталгаажсан шүүгч олдсонгүй.');
         await _api.postAuthorized('/referees/requests/$id/assign?referee_user_id=${referee['user_id']}', token: token, body: {});
       } else {
