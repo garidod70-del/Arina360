@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -12,9 +12,10 @@ def utcnow():
 
 class ServiceProvider(Base):
     __tablename__ = "service_providers"
+    __table_args__ = (UniqueConstraint("user_id", "category", name="uq_service_provider_user_category"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), unique=True, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     category: Mapped[str] = mapped_column(String(60), nullable=False, index=True)
     display_name: Mapped[str] = mapped_column(String(140), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
