@@ -4,14 +4,14 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../core/config/api_config.dart';
 import '../../core/network/api_client.dart';
 
-class RefereeBookingPage extends StatefulWidget {
-  const RefereeBookingPage({super.key});
+class ApiRefereeBookingPage extends StatefulWidget {
+  const ApiRefereeBookingPage({super.key});
 
   @override
-  State<RefereeBookingPage> createState() => _RefereeBookingPageState();
+  State<ApiRefereeBookingPage> createState() => _ApiRefereeBookingPageState();
 }
 
-class _RefereeBookingPageState extends State<RefereeBookingPage> {
+class _ApiRefereeBookingPageState extends State<ApiRefereeBookingPage> {
   static const _storage = FlutterSecureStorage();
   final _api = ApiClient();
   final _venue = TextEditingController();
@@ -60,15 +60,13 @@ class _RefereeBookingPageState extends State<RefereeBookingPage> {
       final token = await _token();
       if (token == null) throw const ApiException(401, 'Дахин нэвтэрнэ үү.');
       final results = await Future.wait([
-        _api.get('/referees/requests/me', token: token),
-        _api.get('/referees', token: token),
+        _api.getList('/referees/requests/me', token: token),
+        _api.getList('/referees', token: token),
       ]);
       if (!mounted) return;
       setState(() {
-        _requests = (results[0]['items'] as List? ?? results[0] as List)
-            .cast<Map<String, dynamic>>();
-        _referees = (results[1]['items'] as List? ?? results[1] as List)
-            .cast<Map<String, dynamic>>();
+        _requests = results[0];
+        _referees = results[1];
       });
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());
