@@ -149,10 +149,15 @@ class ApiClient {
           headers: {'Authorization': 'Bearer $token'},
         )
         .timeout(const Duration(seconds: 20));
-    final decoded = response.body.isEmpty ? <dynamic>[] : jsonDecode(response.body) as List<dynamic>;
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw ApiException(response.statusCode, 'Сервертэй холбогдоход алдаа гарлаа.');
+      dynamic errorBody;
+      try { errorBody = jsonDecode(response.body); } catch (_) {}
+      throw ApiException(
+        response.statusCode,
+        errorBody is Map ? errorBody['detail']?.toString() ?? 'Серверийн хүсэлт амжилтгүй.' : 'Серверийн хүсэлт амжилтгүй.',
+      );
     }
+    final decoded = response.body.isEmpty ? <dynamic>[] : jsonDecode(response.body) as List<dynamic>;
     return decoded.cast<Map<String, dynamic>>();
   }
 
