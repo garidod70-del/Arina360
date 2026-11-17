@@ -6,29 +6,20 @@ import 'package:open_filex/open_filex.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
+import 'core/config/api_config.dart';
+import 'core/network/api_client.dart';
+import 'features/auth/data/auth_repository.dart';
+import 'features/auth/domain/auth_session.dart';
+import 'features/services/domain/service_item.dart';
 
 void main() => runApp(const Arena360App());
 
 const navy = Color(0xFF101B36);
 const blue = Color(0xFF2878FF);
 const pageBg = Color(0xFFF4F7FC);
-
-class ServiceItem {
-  final IconData icon;
-  final String name;
-  final String description;
-  const ServiceItem(this.icon, this.name, this.description);
-}
-
-const services = <ServiceItem>[
-  ServiceItem(Icons.sports, 'Шүүгч', 'Спортын төрлөөр шүүгч хайх'),
-  ServiceItem(Icons.groups, 'Клуб, сургалтууд', 'Клуб, секц болон сургалт'),
-  ServiceItem(Icons.emoji_events, 'Спортын тэмцээн', 'Багийн, ганцаарчилсан, үндэсний спорт'),
-  ServiceItem(Icons.stadium, 'Заал түрээс', 'Заал, талбайн цаг захиалга'),
-  ServiceItem(Icons.shopping_bag, 'Спорт бараа', 'Спортын хувцас, хэрэгсэл'),
-  ServiceItem(Icons.school, 'Дасгалжуулагч, шүүгчийн сургалт', 'Сургалт, шалгалт, гэрчилгээ'),
-  ServiceItem(Icons.fitness_center, 'Фитнесс', 'Фитнесс төв, эрх, дасгалжуулагч'),
-];
 
 class Arena360App extends StatelessWidget {
   const Arena360App({super.key});
@@ -70,19 +61,18 @@ class AuthPage extends StatefulWidget {
 }
 
 class _AuthPageState extends State<AuthPage> {
+  static const _secureStorage = FlutterSecureStorage();
   final _formKey = GlobalKey<FormState>();
   final _phone = TextEditingController();
   final _password = TextEditingController();
-  final _repeatPassword = TextEditingController();
   bool _isRegister = false;
   bool _showPassword = false;
-  bool _acceptedTerms = false;
+  bool _isSubmitting = false;
 
   @override
   void dispose() {
     _phone.dispose();
     _password.dispose();
-    _repeatPassword.dispose();
     super.dispose();
   }
 
@@ -92,19 +82,58 @@ class _AuthPageState extends State<AuthPage> {
         : 'Утасны дугаар оруулна уу';
   }
 
-  void _submit() {
-    if (!_formKey.currentState!.validate()) return;
-    if (_isRegister && !_acceptedTerms) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Үйлчилгээний нөхцөлийг зөвшөөрнө үү')),
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate() || _isSubmitting) return;
+
+    if (!ApiConfig.isConfigured) {
+      // Keeps the existing prototype usable until the API is deployed.
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => HomePage(phone: _phone.text.trim()),
+        ),
       );
       return;
     }
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (_) => HomePage(phone: _phone.text.trim()),
-      ),
-    );
+
+    setState(() => _isSubmitting = true);
+    final api = ApiClient();
+    try {
+      final repository = AuthRepository(api);
+      final response = _isRegister
+          ? await repository.register(
+              phone: _phone.text.trim(),
+              password: _password.text,
+            )
+          : await repository.login(
+              phone: _phone.text.trim(),
+              password: _password.text,
+            );
+      final session = AuthSession.fromJson(response);
+      final prefs = await SharedPreferences.getInstance();
+      await _secureStorage.write(key: 'arena_access_token', value: session.accessToken);
+      await prefs.setStringList('arena_user_roles', session.roles);
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => HomePage(phone: session.phone),
+        ),
+      );
+    } on ApiException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.message)),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Сервертэй холбогдож чадсангүй. Дахин оролдоно уу.')),
+        );
+      }
+    } finally {
+      api.close();
+      if (mounted) setState(() => _isSubmitting = false);
+    }
   }
 
   @override
@@ -162,7 +191,6 @@ class _AuthPageState extends State<AuthPage> {
                     TextFormField(
                       controller: _phone,
                       keyboardType: TextInputType.phone,
-                      maxLength: 8,
                       decoration: const InputDecoration(
                         labelText: 'Утасны дугаар',
                         prefixIcon: Icon(Icons.phone),
@@ -193,40 +221,19 @@ class _AuthPageState extends State<AuthPage> {
                               ? 'Нууц үг оруулна уу'
                               : null,
                     ),
-                    if (_isRegister) ...[
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _repeatPassword,
-                        obscureText: !_showPassword,
-                        decoration: const InputDecoration(
-                          labelText: 'Нууц үг давтах',
-                          prefixIcon: Icon(Icons.lock_reset),
-                        ),
-                        validator: (value) {
-                          if ((value ?? '').isEmpty) return 'Нууц үгээ давтана уу';
-                          if (value != _password.text) return 'Нууц үг таарахгүй байна';
-                          return null;
-                        },
-                      ),
-                      CheckboxListTile(
-                        contentPadding: EdgeInsets.zero,
-                        value: _acceptedTerms,
-                        onChanged: (value) =>
-                            setState(() => _acceptedTerms = value ?? false),
-                        controlAffinity: ListTileControlAffinity.leading,
-                        title: const Text(
-                          'Үйлчилгээний нөхцөлийг зөвшөөрөх',
-                          style: TextStyle(fontSize: 13),
-                        ),
-                      ),
-                    ],
                     const SizedBox(height: 16),
                     SizedBox(
                       height: 52,
                       child: FilledButton(
                         style: FilledButton.styleFrom(backgroundColor: blue),
-                        onPressed: _submit,
-                        child: Text(_isRegister ? 'БҮРТГҮҮЛЭХ' : 'НЭВТРЭХ'),
+                        onPressed: _isSubmitting ? null : _submit,
+                        child: _isSubmitting
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : Text(_isRegister ? 'БҮРТГҮҮЛЭХ' : 'НЭВТРЭХ'),
                       ),
                     ),
                     TextButton(
@@ -240,10 +247,12 @@ class _AuthPageState extends State<AuthPage> {
                             : 'Шинэ хэрэглэгч үү? Бүртгүүлэх',
                       ),
                     ),
-                    const Text(
-                      'Туршилтын нэвтрэлт: дурын утасны дугаар болон хоосон биш нууц үгээр нэвтэрнэ. Серверийн баталгаажуулалт холбогдоогүй.',
+                    Text(
+                      ApiConfig.isConfigured
+                          ? 'Нэгдсэн серверийн бүртгэл ашиглаж байна.'
+                          : 'Туршилтын горим: серверийн хаяг тохируулах хүртэл нэвтрэлт төхөөрөмж дээр туршилтаар ажиллана.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 11, color: Colors.blueGrey),
+                      style: const TextStyle(fontSize: 11, color: Colors.blueGrey),
                     ),
                   ],
                 ),
@@ -316,6 +325,15 @@ class _HomePageState extends State<HomePage> {
         title: const Text('ARENA 360'),
         actions: [
           IconButton(
+            tooltip: 'Миний профайл',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => ProfilePage(phone: widget.phone),
+              ),
+            ),
+            icon: const Icon(Icons.account_circle_outlined),
+          ),
+          IconButton(
             tooltip: 'Шинэчлэлт шалгах',
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const AppUpdatePage()),
@@ -324,10 +342,16 @@ class _HomePageState extends State<HomePage> {
           ),
           IconButton(
             tooltip: 'Гарах',
-            onPressed: () => Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (_) => const AuthPage()),
-              (_) => false,
-            ),
+            onPressed: () async {
+              final prefs = await SharedPreferences.getInstance();
+              await const FlutterSecureStorage().delete(key: 'arena_access_token');
+              await prefs.remove('arena_user_roles');
+              if (!context.mounted) return;
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const AuthPage()),
+                (_) => false,
+              );
+            },
             icon: const Icon(Icons.logout),
           ),
         ],
@@ -1028,6 +1052,260 @@ class _AppUpdatePageState extends State<AppUpdatePage> {
         const SizedBox(height: 10),
         const Text('Шинэчлэлт суулгах үед Android-ийн баталгаажуулах цонх гарна. Шинэ хувилбар ижил гарын үсгээр гарсан байх шаардлагатай.', style: TextStyle(fontSize: 12, color: Colors.blueGrey)),
       ]),
+    );
+  }
+}
+
+
+class ProfilePage extends StatefulWidget {
+  final String phone;
+  const ProfilePage({super.key, required this.phone});
+
+  @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  final _formKey = GlobalKey<FormState>();
+  final _name = TextEditingController();
+  final _location = TextEditingController();
+  String _role = 'Тэмцээн зохион байгуулагч';
+  String _sport = 'Жүдо';
+  bool _loading = true;
+  bool _saving = false;
+  bool _saved = false;
+
+  static const _roles = <String>[
+    'Тэмцээн зохион байгуулагч',
+    'Шүүгч',
+  ];
+  static const _sports = <String>[
+    'Жүдо', 'Самбо', 'Чөлөөт бөх', 'Үндэсний бөх',
+    'Сагсан бөмбөг', 'Волейбол', 'Хөлбөмбөг',
+    'Бокс', 'Таеквондо', 'Гимнастик', 'Бусад',
+  ];
+
+  String get _keyPrefix => 'arena360.profile.${widget.phone}.';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _name.text = prefs.getString('${_keyPrefix}name') ?? '';
+      _location.text = prefs.getString('${_keyPrefix}location') ?? '';
+      final savedRole = prefs.getString('${_keyPrefix}role');
+      final savedSport = prefs.getString('${_keyPrefix}sport');
+      if (mounted) {
+        setState(() {
+          if (_roles.contains(savedRole)) _role = savedRole!;
+          if (_sports.contains(savedSport)) _sport = savedSport!;
+          _loading = false;
+          _saved = _name.text.trim().isNotEmpty;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _saveProfile() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _saving = true);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('${_keyPrefix}name', _name.text.trim());
+      await prefs.setString('${_keyPrefix}location', _location.text.trim());
+      await prefs.setString('${_keyPrefix}role', _role);
+      await prefs.setString('${_keyPrefix}sport', _sport);
+      if (!mounted) return;
+      setState(() {
+        _saving = false;
+        _saved = true;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Профайл энэ төхөөрөмжид хадгалагдлаа.')),
+      );
+    } catch (_) {
+      if (mounted) {
+        setState(() => _saving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Хадгалж чадсангүй. Дахин оролдоно уу.')),
+        );
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _location.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Миний профайл')),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : ListView(
+              padding: const EdgeInsets.all(20),
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [navy, Color(0xFF244B91)],
+                    ),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.account_circle, color: Colors.white, size: 42),
+                      SizedBox(height: 10),
+                      Text(
+                        'ARENA 360 PROFILE',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      SizedBox(height: 5),
+                      Text(
+                        'Өөрийн мэдээлэл болон хэрэглэгчийн төрлөө тохируулна уу.',
+                        style: TextStyle(color: Colors.white70),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                if (_saved)
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    margin: const EdgeInsets.only(bottom: 14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEAF7EF),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.check_circle, color: Colors.green),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text('Профайлын мэдээлэл энэ төхөөрөмжид хадгалагдсан.'),
+                        ),
+                      ],
+                    ),
+                  ),
+                Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      TextFormField(
+                        controller: _name,
+                        textCapitalization: TextCapitalization.words,
+                        decoration: const InputDecoration(
+                          labelText: 'Овог, нэр',
+                          prefixIcon: Icon(Icons.person_outline),
+                        ),
+                        validator: (value) => (value ?? '').trim().isEmpty
+                            ? 'Нэрээ оруулна уу'
+                            : null,
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        initialValue: widget.phone,
+                        readOnly: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Бүртгэлтэй утасны дугаар',
+                          prefixIcon: Icon(Icons.phone),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        value: _role,
+                        decoration: const InputDecoration(
+                          labelText: 'Хэрэглэгчийн төрөл',
+                          prefixIcon: Icon(Icons.badge_outlined),
+                        ),
+                        items: _roles
+                            .map((value) => DropdownMenuItem(
+                                  value: value,
+                                  child: Text(value),
+                                ))
+                            .toList(),
+                        onChanged: (value) {
+                          if (value != null) setState(() => _role = value);
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        value: _sport,
+                        decoration: const InputDecoration(
+                          labelText: 'Спортын төрөл',
+                          prefixIcon: Icon(Icons.sports),
+                        ),
+                        items: _sports
+                            .map((value) => DropdownMenuItem(
+                                  value: value,
+                                  child: Text(value),
+                                ))
+                            .toList(),
+                        onChanged: (value) {
+                          if (value != null) setState(() => _sport = value);
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _location,
+                        decoration: const InputDecoration(
+                          labelText: 'Аймаг / хот, дүүрэг',
+                          prefixIcon: Icon(Icons.location_on_outlined),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      SizedBox(
+                        height: 52,
+                        child: FilledButton.icon(
+                          onPressed: _saving ? null : _saveProfile,
+                          style: FilledButton.styleFrom(
+                            backgroundColor: blue,
+                          ),
+                          icon: _saving
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Icon(Icons.save_outlined),
+                          label: Text(_saving ? 'ХАДГАЛЖ БАЙНА...' : 'ПРОФАЙЛ ХАДГАЛАХ'),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Анхааруулга: энэ шатанд профайл зөвхөн тухайн утсанд хадгалагдана. Серверийн бүртгэл, SMS баталгаажуулалт болон бусад төхөөрөмжтэй синк хараахан холбогдоогүй.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.blueGrey,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
     );
   }
 }
