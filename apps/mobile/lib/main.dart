@@ -340,10 +340,16 @@ class _HomePageState extends State<HomePage> {
           ),
           IconButton(
             tooltip: 'Гарах',
-            onPressed: () => Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (_) => const AuthPage()),
-              (_) => false,
-            ),
+            onPressed: () async {
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.remove('arena_access_token');
+              await prefs.remove('arena_user_roles');
+              if (!context.mounted) return;
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const AuthPage()),
+                (_) => false,
+              );
+            },
             icon: const Icon(Icons.logout),
           ),
         ],
