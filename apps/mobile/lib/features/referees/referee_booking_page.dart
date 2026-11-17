@@ -29,6 +29,7 @@ class _ApiRefereeBookingPageState extends State<ApiRefereeBookingPage> {
   String? _error;
   List<Map<String, dynamic>> _requests = [];
   List<Map<String, dynamic>> _referees = [];
+  int? _selectedRefereeId;
 
   @override
   void initState() {
@@ -67,6 +68,7 @@ class _ApiRefereeBookingPageState extends State<ApiRefereeBookingPage> {
       setState(() {
         _requests = results[0];
         _referees = results[1];
+        if (_selectedRefereeId == null && _referees.isNotEmpty) _selectedRefereeId = _referees.first['user_id'] as int;
       });
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());
@@ -110,14 +112,14 @@ class _ApiRefereeBookingPageState extends State<ApiRefereeBookingPage> {
     }
   }
 
-  Future<void> _action(int id, String action, {Map<String, dynamic>? body}) async {
+  Future<void> _action(int id, String action, {Map<String, dynamic>? body, String? sport}) async {
     final token = await _token();
     if (token == null) return;
     setState(() { _busy = true; _error = null; });
     try {
       if (action == 'assign') {
-        final referee = _referees.firstWhere((r) => r['sport'].toString().toLowerCase() == _sport.toLowerCase(), orElse: () => {});
-        if (referee.isEmpty) throw const ApiException(404, 'Тохирох баталгаажсан шүүгч олдсонгүй.');
+        final referee = _referees.where((r) => r['user_id'] == _selectedRefereeId && r['sport'].toString().toLowerCase() == (sport ?? _sport).toLowerCase()).firstOrNull;
+        if (referee == null) throw const ApiException(404, 'Сонгосон спортын баталгаажсан шүүгч олдсонгүй.');
         await _api.postAuthorized('/referees/requests/$id/assign?referee_user_id=${referee['user_id']}', token: token, body: {});
       } else {
         await _api.postAuthorized('/referees/requests/$id/$action', token: token, body: body ?? {});
@@ -164,7 +166,12 @@ class _ApiRefereeBookingPageState extends State<ApiRefereeBookingPage> {
         keyboardType: number ? TextInputType.number : TextInputType.text,
         maxLines: maxLines,
         decoration: InputDecoration(labelText: label),
-        validator: (v) => (v ?? '').trim().isEmpty ? 'Энэ талбарыг бөглөнө үү' : null,
+        validator: (v) {
+          if ((v ?? '').trim().isEmpty) return 'Энэ талбарыг бөглөнө үү';
+          if (number && int.tryParse(v!.trim()) == null) return 'Бүхэл тоо оруулна уу';
+          if (number && int.parse(v!.trim()) < 0) return 'Эерэг дүн оруулна уу';
+          return null;
+        },
       ),
     );
   }
@@ -193,6 +200,13 @@ class _ApiRefereeBookingPageState extends State<ApiRefereeBookingPage> {
                 value: _rank, decoration: const InputDecoration(labelText: 'Шүүгчийн зэрэглэл'),
                 items: ['Олон улсын','Улсын','I зэрэг','II зэрэг','III зэрэг'].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
                 onChanged: (v) => setState(() => _rank = v ?? _rank),
+              ),
+              const SizedBox(height: 10),
+              if (_referees.isNotEmpty) DropdownButtonFormField<int>(
+                value: _referees.any((r) => r['user_id'] == _selectedRefereeId) ? _selectedRefereeId : null,
+                decoration: const InputDecoration(labelText: 'Баталгаажсан шүүгч (томилгоонд)'),
+                items: _referees.map((r) => DropdownMenuItem<int>(value: r['user_id'] as int, child: Text('${r['full_name'] ?? r['sport']} • ${r['rank']}'))).toList(),
+                onChanged: (v) => setState(() => _selectedRefereeId = v),
               ),
               const SizedBox(height: 10),
               OutlinedButton.icon(
@@ -233,7 +247,7 @@ class _ApiRefereeBookingPageState extends State<ApiRefereeBookingPage> {
               Text('${item['sport']} • ${item['rank']}', style: const TextStyle(fontWeight: FontWeight.bold)),
               Text('${item['venue']} • ${item['event_at']}'),
               Text('Дүн: ${item['total_amount']} ₮ • Төлөв: $status'),
-              if (status == 'pending') TextButton(onPressed: _busy ? null : () => _action(id, 'assign'), child: const Text('Тохирох шүүгчид томилох')),
+              if (status == 'pending') TextButton(onPressed: _busy ? null : () => _action(id, 'assign', sport: item['sport']?.toString()), child: const Text('Тохирох шүүгчид томилох')),
               if (status == 'assigned') TextButton(onPressed: _busy ? null : () => _action(id, 'accept'), child: const Text('Томилгоо зөвшөөрөх')),
               if (status == 'accepted') TextButton(onPressed: _busy ? null : () => _action(id, 'complete'), child: const Text('Ажил дууссан гэж тэмдэглэх')),
               if (status == 'completed' && item['referee_user_id'] != null) TextButton(onPressed: _busy ? null : () => _rate(id), child: const Text('Шүүгчид үнэлгээ өгөх')),
