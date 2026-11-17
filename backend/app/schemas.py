@@ -12,9 +12,14 @@ class RegisterRequest(BaseModel):
         normalized = "".join(ch for ch in value.strip() if ch not in " -()")
         if normalized.startswith("00"):
             normalized = "+" + normalized[2:]
-        digits = normalized[1:] if normalized.startswith("+") else normalized
+        has_prefix = normalized.startswith("+")
+        digits = normalized[1:] if has_prefix else normalized
         if not digits.isdigit() or not 8 <= len(digits) <= 15:
             raise ValueError("Утасны дугаараа зөв оруулна уу.")
+        if not has_prefix and len(digits) == 8:
+            return "+976" + digits
+        if not has_prefix and len(digits) == 11 and digits.startswith("976"):
+            return "+" + digits
         return normalized
 
 
