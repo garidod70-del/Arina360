@@ -32,8 +32,9 @@ def upgrade():
             sa.Column("verified_by", sa.Integer(), sa.ForeignKey("users.id", ondelete="SET NULL"), nullable=True),
             sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
             sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+            sa.UniqueConstraint("user_id", "category", name="uq_service_provider_user_category"),
         )
-        op.create_index("ix_service_providers_user_id", "service_providers", ["user_id"], unique=True)
+        op.create_index("ix_service_providers_user_id", "service_providers", ["user_id"])
         op.create_index("ix_service_providers_category", "service_providers", ["category"])
         op.create_index("ix_service_providers_sport", "service_providers", ["sport"])
         op.create_index("ix_service_providers_region", "service_providers", ["region"])
