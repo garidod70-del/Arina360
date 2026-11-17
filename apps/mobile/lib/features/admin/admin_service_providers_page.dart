@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-import '../../../core/network/api_client.dart';
+import '../../core/network/api_client.dart';
 
 class AdminServiceProvidersPage extends StatefulWidget {
   const AdminServiceProvidersPage({super.key});
