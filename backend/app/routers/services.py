@@ -146,6 +146,20 @@ def save_my_service_provider(
     return _provider_output(item)
 
 
+@router.get("/providers/pending", response_model=list[ServiceProviderOutput])
+def list_service_provider_reviews(
+    verification_status: str = Query(default="pending", pattern="^(pending|verified|rejected)$"),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if not _is_admin(user):
+        raise HTTPException(status_code=403, detail="Зөвхөн админ үйлчилгээ үзүүлэгчийн бүртгэл шалгана.")
+    rows = db.query(ServiceProvider).filter(
+        ServiceProvider.verification_status == verification_status
+    ).order_by(ServiceProvider.created_at.asc()).limit(200).all()
+    return [_provider_output(item) for item in rows]
+
+
 @router.post("/providers/{provider_id}/verify", response_model=ServiceProviderOutput)
 def verify_service_provider(
     provider_id: int,
