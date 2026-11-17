@@ -29,7 +29,113 @@ class ApiClient {
         'Серверийн хаяг тохируулаагүй байна. ARENA_API_BASE_URL шаардлагатай.',
       );
     }
-    final uri = Uri.parse('${ApiConfig.baseUrl}/api/v1$path');
+    final uri = Uri.parse('${ApiConfig.baseUrl.replaceFirst(RegExp(r'/+;
+    final response = await _client
+        .post(
+          uri,
+          headers: const {'Content-Type': 'application/json'},
+          body: jsonEncode(body),
+        )
+        .timeout(const Duration(seconds: 20));
+    final decoded = response.body.isEmpty
+        ? <String, dynamic>{}
+        : jsonDecode(response.body) as Map<String, dynamic>;
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw ApiException(
+        response.statusCode,
+        decoded['detail']?.toString() ?? 'Сервертэй холбогдоход алдаа гарлаа.',
+      );
+    }
+    return decoded;
+  }
+
+  Future<Map<String, dynamic>> get(String path, {required String token}) async {
+    if (!ApiConfig.isConfigured) {
+      throw const ApiException(0, 'Серверийн хаяг тохируулаагүй байна.');
+    }
+    final response = await _client
+        .get(
+          Uri.parse('${ApiConfig.baseUrl.replaceFirst(RegExp(r'/+,
+          headers: {'Authorization': 'Bearer $token'},
+        )
+        .timeout(const Duration(seconds: 20));
+    final decoded = response.body.isEmpty
+        ? <String, dynamic>{}
+        : jsonDecode(response.body) as Map<String, dynamic>;
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw ApiException(
+        response.statusCode,
+        decoded['detail']?.toString() ?? 'Сервертэй холбогдоход алдаа гарлаа.',
+      );
+    }
+    return decoded;
+  }
+
+  void close() => _client.close();
+}
+), '')}/api/v1$path');
+    final response = await _client
+        .post(
+          uri,
+          headers: const {'Content-Type': 'application/json'},
+          body: jsonEncode(body),
+        )
+        .timeout(const Duration(seconds: 20));
+    final decoded = response.body.isEmpty
+        ? <String, dynamic>{}
+        : jsonDecode(response.body) as Map<String, dynamic>;
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw ApiException(
+        response.statusCode,
+        decoded['detail']?.toString() ?? 'Сервертэй холбогдоход алдаа гарлаа.',
+      );
+    }
+    return decoded;
+  }
+
+  Future<Map<String, dynamic>> get(String path, {required String token}) async {
+    if (!ApiConfig.isConfigured) {
+      throw const ApiException(0, 'Серверийн хаяг тохируулаагүй байна.');
+    }
+    final response = await _client
+        .get(
+          Uri.parse('${ApiConfig.baseUrl}/api/v1$path'),
+          headers: {'Authorization': 'Bearer $token'},
+        )
+        .timeout(const Duration(seconds: 20));
+    final decoded = response.body.isEmpty
+        ? <String, dynamic>{}
+        : jsonDecode(response.body) as Map<String, dynamic>;
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw ApiException(
+        response.statusCode,
+        decoded['detail']?.toString() ?? 'Сервертэй холбогдоход алдаа гарлаа.',
+      );
+    }
+    return decoded;
+  }
+
+  void close() => _client.close();
+}
+), '')}/api/v1$path'),
+          headers: {'Authorization': 'Bearer $token'},
+        )
+        .timeout(const Duration(seconds: 20));
+    final decoded = response.body.isEmpty
+        ? <String, dynamic>{}
+        : jsonDecode(response.body) as Map<String, dynamic>;
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw ApiException(
+        response.statusCode,
+        decoded['detail']?.toString() ?? 'Сервертэй холбогдоход алдаа гарлаа.',
+      );
+    }
+    return decoded;
+  }
+
+  void close() => _client.close();
+}
+), '')}/api/v1$path');
     final response = await _client
         .post(
           uri,
