@@ -5,11 +5,11 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.database import Base, engine
-from app import models  # noqa: F401
+from app import models, referee_models  # noqa: F401
 from app.routers.auth import router as auth_router
 from app.routers.profile import router as profile_router
 from app.routers.referees import router as referees_router
-from app import referee_models  # noqa: F401
+from app.routers.admin import router as admin_router
 
 settings = get_settings()
 
@@ -23,7 +23,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="ARENA 360 API",
-    version="0.2.0",
+    version="0.3.0",
     description="Нэгдсэн спортын үйлчилгээний API",
     lifespan=lifespan,
 )
@@ -32,11 +32,12 @@ app.add_middleware(
     allow_origins=settings.cors_origin_list,
     allow_credentials=False,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
-    allow_headers=["Authorization", "Content-Type"],
+    allow_headers=["Authorization", "Content-Type", "X-Admin-Bootstrap-Key"],
 )
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(profile_router, prefix="/api/v1")
 app.include_router(referees_router, prefix="/api/v1")
+app.include_router(admin_router, prefix="/api/v1")
 
 
 @app.get("/health", tags=["system"])
