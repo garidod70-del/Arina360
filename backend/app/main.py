@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 
 from app.config import get_settings
 from app.database import Base, engine
@@ -46,4 +47,21 @@ app.include_router(venues_router, prefix="/api/v1")
 
 @app.get("/health", tags=["system"])
 def health():
-    return {"status": "ok", "service": "arena360-api"}
+    """Liveness probe: confirms that the API process is running."""
+    return {"status": "ok", "service": "arena360-api", "version": app.version}
+
+
+@app.get("/health/ready", tags=["system"])
+def readiness():
+    """Readiness probe: confirms the API can reach its configured database."""
+    try:
+        with engine.connect() as connection:
+            connection.execute(text("SELECT 1"))
+    except Exception:
+        from fastapi import HTTPException, status
+
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Өгөгдлийн сантай холбогдох боломжгүй байна.",
+        )
+    return {"status": "ready", "service": "arena360-api", "database": "connected"}
