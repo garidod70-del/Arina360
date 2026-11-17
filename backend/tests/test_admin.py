@@ -31,6 +31,7 @@ def test_bootstrap_admin_grants_and_verifies_referee(monkeypatch):
         granted = client.post("/api/v1/admin/referees/grant", headers=headers, json={
             "phone": phone, "sport": "Жүдо", "rank": "Улсын",
             "region": "Улаанбаатар", "base_fee": 50000,
+            "license_number": "JUDO-2026-001", "license_issuer": "Монголын жүдо бөхийн холбоо",
         })
         assert granted.status_code == 201
         assert granted.json()["verification_status"] == "pending"
