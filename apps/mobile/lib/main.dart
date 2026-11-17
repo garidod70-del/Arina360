@@ -1100,6 +1100,8 @@ class _ProfilePageState extends State<ProfilePage> {
       _location.text = prefs.getString('${_keyPrefix}location') ?? '';
       final savedRole = prefs.getString('${_keyPrefix}role');
       final savedSport = prefs.getString('${_keyPrefix}sport');
+      if (_roles.contains(savedRole)) _role = savedRole!;
+      if (_sports.contains(savedSport)) _sport = savedSport!;
 
       // Local values remain available offline; authenticated server data takes priority.
       if (ApiConfig.isConfigured) {
@@ -1125,8 +1127,6 @@ class _ProfilePageState extends State<ProfilePage> {
 
       if (mounted) {
         setState(() {
-          if (_roles.contains(savedRole)) _role = savedRole!;
-          if (_sports.contains(savedSport) && _name.text.isEmpty) _sport = savedSport!;
           _loading = false;
           _saved = _name.text.trim().isNotEmpty;
         });
