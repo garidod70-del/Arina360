@@ -15,7 +15,6 @@ class Settings(BaseSettings):
 
     @property
     def sqlalchemy_database_url(self) -> str:
-        # Render provides postgres:// or postgresql://; use the installed psycopg v3 driver.
         if self.database_url.startswith("postgres://"):
             return self.database_url.replace("postgres://", "postgresql+psycopg://", 1)
         if self.database_url.startswith("postgresql://"):
@@ -25,10 +24,6 @@ class Settings(BaseSettings):
     @property
     def cors_origin_list(self) -> list[str]:
         return [item.strip() for item in self.cors_origins.split(",") if item.strip()]
-
-    @lru_cache
-    def _unused(self):
-        return None
 
 
 @lru_cache
