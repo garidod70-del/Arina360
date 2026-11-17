@@ -25,7 +25,7 @@ def test_service_provider_verification_and_request_lifecycle():
     from app.database import SessionLocal
     from app.models import User, UserRole
 
-    suffix = uuid.uuid4().hex[:6]
+    suffix = str(uuid.uuid4().int % 1000000).zfill(6)
     provider_phone = "+97699" + suffix + "01"
     requester_phone = "+97699" + suffix + "02"
     admin_phone = "+97699" + suffix + "03"
