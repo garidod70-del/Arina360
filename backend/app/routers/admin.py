@@ -1,6 +1,7 @@
 import hmac
+from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -24,6 +25,9 @@ class RefereeAccessRequest(BaseModel):
     region: str = Field(min_length=2, max_length=120)
     bio: str | None = Field(default=None, max_length=2000)
     base_fee: int = Field(default=0, ge=0, le=100_000_000)
+    license_number: str = Field(min_length=2, max_length=120)
+    license_issuer: str = Field(min_length=2, max_length=160)
+    license_expires_at: datetime | None = None
 
 
 class VerificationRequest(BaseModel):
@@ -41,7 +45,6 @@ def bootstrap_first_admin(
     x_admin_bootstrap_key: str | None = Header(default=None),
     db: Session = Depends(get_db),
 ):
-    # One-time owner bootstrap. Disable the key after creating the first admin.
     settings = get_settings()
     expected = settings.admin_bootstrap_key
     if not expected or not x_admin_bootstrap_key or not hmac.compare_digest(expected, x_admin_bootstrap_key):
@@ -78,8 +81,16 @@ def grant_referee_access(
         for key, value in values.items():
             setattr(profile, key, value)
         profile.verification_status = "pending"
+        profile.verified_at = None
+        profile.verified_by = None
+        profile.verification_note = None
     db.commit()
-    return {"status": "referee_role_granted", "user_id": user.id, "verification_status": "pending"}
+    return {
+        "status": "referee_role_granted",
+        "user_id": user.id,
+        "verification_status": "pending",
+        "license_number": profile.license_number,
+    }
 
 
 @router.post("/referees/{user_id}/verify")
@@ -94,10 +105,25 @@ def verify_referee(
     profile = db.query(RefereeProfile).filter(RefereeProfile.user_id == user_id).first()
     if profile is None:
         raise HTTPException(status_code=404, detail="Шүүгчийн профайл олдсонгүй.")
-    profile.verification_status = "verified" if payload.approved else "rejected"
+    if payload.approved:
+        if not profile.license_number or not profile.license_issuer:
+            raise HTTPException(status_code=422, detail="Лицензийн дугаар болон олгосон байгууллагыг бүртгэнэ үү.")
+        if profile.license_expires_at and profile.license_expires_at.date() < datetime.now(timezone.utc).date():
+            raise HTTPException(status_code=422, detail="Шүүгчийн лицензийн хугацаа дууссан байна.")
+        profile.verification_status = "verified"
+        profile.verified_at = datetime.now(timezone.utc)
+        profile.verified_by = admin.id
+    else:
+        profile.verification_status = "rejected"
+        profile.verified_at = None
+        profile.verified_by = admin.id
+    profile.verification_note = payload.note
     db.commit()
     return {
         "user_id": user_id,
         "verification_status": profile.verification_status,
-        "note": payload.note,
+        "license_number": profile.license_number,
+        "verified_by": profile.verified_by,
+        "verified_at": profile.verified_at,
+        "note": profile.verification_note,
     }
