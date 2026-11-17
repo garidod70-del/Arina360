@@ -20,7 +20,14 @@ import 'features/referees/referee_booking_page.dart';
 import 'features/admin/admin_referee_page.dart';
 import 'features/admin/admin_service_providers_page.dart';
 
-void main() => runApp(const Arena360App());
+final ValueNotifier<ThemeMode> arenaThemeMode = ValueNotifier(ThemeMode.dark);
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final prefs = await SharedPreferences.getInstance();
+  arenaThemeMode.value = prefs.getBool('arena_dark_mode') == false ? ThemeMode.light : ThemeMode.dark;
+  runApp(const Arena360App());
+}
 
 const navy = Color(0xFF101B36);
 const blue = Color(0xFF2878FF);
@@ -31,29 +38,34 @@ class Arena360App extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'ARENA 360',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(seedColor: blue),
-        scaffoldBackgroundColor: pageBg,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: navy,
-          foregroundColor: Colors.white,
-          centerTitle: false,
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: arenaThemeMode,
+      builder: (context, mode, _) => MaterialApp(
+        title: 'ARENA 360',
+        debugShowCheckedModeBanner: false,
+        themeMode: mode,
+        theme: ThemeData(
+          useMaterial3: true,
+          colorScheme: ColorScheme.fromSeed(seedColor: blue, brightness: Brightness.light),
+          scaffoldBackgroundColor: const Color(0xFFF3F7FD),
+          cardColor: Colors.white,
+          appBarTheme: const AppBarTheme(backgroundColor: navy, foregroundColor: Colors.white, centerTitle: false, elevation: 0),
+          inputDecorationTheme: InputDecorationTheme(filled: true, fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)), enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFDCE6F4)))),
+          cardTheme: CardThemeData(color: Colors.white, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: const BorderSide(color: Color(0xFFE1EAF6)))),
         ),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: Colors.white,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-          ),
+        darkTheme: ThemeData(
+          useMaterial3: true,
+          brightness: Brightness.dark,
+          colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF3D8BFF), brightness: Brightness.dark).copyWith(primary: const Color(0xFF4B95FF), secondary: const Color(0xFF65B8FF), surface: const Color(0xFF10213B)),
+          scaffoldBackgroundColor: const Color(0xFF081426),
+          cardColor: const Color(0xFF10213B),
+          appBarTheme: const AppBarTheme(backgroundColor: Color(0xFF081426), foregroundColor: Colors.white, centerTitle: false, elevation: 0),
+          inputDecorationTheme: InputDecorationTheme(filled: true, fillColor: const Color(0xFF142945), labelStyle: const TextStyle(color: Color(0xFFB7C9E2)), border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)), enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF294362)))),
+          cardTheme: CardThemeData(color: const Color(0xFF10213B), elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: const BorderSide(color: Color(0xFF233B5A)))),
+          dividerColor: const Color(0xFF294362),
         ),
+        home: const AuthPage(),
       ),
-      home: const AuthPage(),
     );
   }
 }
@@ -330,6 +342,16 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         title: const Text('ARENA 360'),
         actions: [
+          IconButton(
+            tooltip: arenaThemeMode.value == ThemeMode.dark ? 'Цайвар загвар руу шилжих' : 'Бараан загвар руу шилжих',
+            onPressed: () async {
+              final next = arenaThemeMode.value == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
+              arenaThemeMode.value = next;
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setBool('arena_dark_mode', next == ThemeMode.dark);
+            },
+            icon: Icon(arenaThemeMode.value == ThemeMode.dark ? Icons.light_mode_outlined : Icons.dark_mode_outlined),
+          ),
           if (widget.roles.contains('admin'))
             IconButton(
               tooltip: 'Админ • Шүүгчийн лиценз',
@@ -444,23 +466,24 @@ class _HomePageState extends State<HomePage> {
                 child: Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFE5EAF2)),
+                    color: Theme.of(context).cardColor,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF233B5A) : const Color(0xFFE1EAF6)),
+                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.16 : 0.035), blurRadius: 16, offset: const Offset(0, 7))],
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Icon(service.icon, color: blue, size: 30),
+                      Icon(service.icon, color: Theme.of(context).colorScheme.primary, size: 30),
                       Text(
                         service.name,
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
-                          color: navy,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
-                      const Icon(Icons.arrow_forward, color: blue, size: 18),
+                      Icon(Icons.arrow_forward, color: Theme.of(context).colorScheme.primary, size: 18),
                     ],
                   ),
                 ),
