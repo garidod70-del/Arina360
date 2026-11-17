@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-import '../../core/config/api_config.dart';
-import '../../core/network/api_client.dart';
-import 'domain/service_item.dart';
+import '../../../core/config/api_config.dart';
+import '../../../core/network/api_client.dart';
+import '../domain/service_item.dart';
 
 class ServiceMarketplacePage extends StatefulWidget {
   final ServiceItem service;
