@@ -39,6 +39,7 @@ def _is_admin(user: User) -> bool:
 
 def _provider_output(item: ServiceProvider) -> ServiceProviderOutput:
     return ServiceProviderOutput(
+        id=item.id,
         user_id=item.user_id,
         category=item.category,
         display_name=item.display_name,
