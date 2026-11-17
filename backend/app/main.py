@@ -8,6 +8,8 @@ from app.database import Base, engine
 from app import models  # noqa: F401
 from app.routers.auth import router as auth_router
 from app.routers.profile import router as profile_router
+from app.routers.referees import router as referees_router
+from app import referee_models  # noqa: F401
 
 settings = get_settings()
 
