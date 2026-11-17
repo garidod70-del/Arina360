@@ -37,6 +37,7 @@ class ServiceProviderInput(BaseModel):
 
 
 class ServiceProviderOutput(BaseModel):
+    id: int
     user_id: int
     category: str
     display_name: str
