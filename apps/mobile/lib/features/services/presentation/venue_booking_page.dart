@@ -155,7 +155,160 @@ class _VenueBookingPageState extends State<VenueBookingPage> {
           TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('БОЛИХ')),
           FilledButton(onPressed: () {
             if (!formKey.currentState!.validate()) return;
-            if (TimeOfDayFormat.HH_colon_mm.name.isEmpty) return;
+            final timePattern = RegExp(r'^([01]?[0-9]|2[0-3]):[0-5][0-9]
+          }, child: const Text('ЦАГ НЭМЭХ')),
+        ],
+      ),
+    );
+    if (ok == true) {
+      final token = await _token();
+      if (token != null) {
+        setState(() => _saving = true);
+        try {
+          await _api.postAuthorized('/venues/slots', token: token, body: {
+            'venue_name': name.text.trim(),
+            'venue_address': address.text.trim(),
+            'sport': sport.text.trim(),
+            'booking_date': _dateText(_selectedDate),
+            'start_time': '${start.text.trim()}:00',
+            'end_time': '${end.text.trim()}:00',
+            'price': int.tryParse(price.text.trim()) ?? 0,
+          });
+          await _load();
+        } catch (error) {
+          if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString())));
+        } finally {
+          if (mounted) setState(() => _saving = false);
+        }
+      }
+    }
+    name.dispose(); address.dispose(); sport.dispose(); start.dispose(); end.dispose(); price.dispose();
+  }
+
+  Widget _field(TextEditingController controller, String label, {bool numeric = false}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: TextFormField(
+        controller: controller,
+        keyboardType: numeric ? TextInputType.number : TextInputType.text,
+        decoration: InputDecoration(labelText: label),
+        validator: (value) => (value ?? '').trim().isEmpty ? 'Энэ талбарыг бөглөнө үү.' : null,
+      ),
+    );
+  }
+
+  String _status(String? value) {
+    switch (value) {
+      case 'pending': return 'Хариу хүлээж байна';
+      case 'confirmed': return 'Баталгаажсан';
+      case 'rejected': return 'Татгалзсан';
+      case 'cancelled': return 'Цуцалсан';
+      default: return value ?? '—';
+    }
+  }
+
+  String _price(dynamic value) {
+    final amount = value is num ? value.toInt() : int.tryParse('$value') ?? 0;
+    return amount == 0 ? 'Үнийг тохиролцоно' : '${amount.toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')} ₮';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Заал захиалга'), actions: [
+        IconButton(onPressed: _loading ? null : _load, icon: const Icon(Icons.refresh)),
+      ]),
+      body: RefreshIndicator(
+        onRefresh: _load,
+        child: ListView(padding: const EdgeInsets.all(16), children: [
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(colors: [Color(0xFF101B36), Color(0xFF244B91)]),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Icon(Icons.stadium, color: Colors.white, size: 34),
+              SizedBox(height: 10),
+              Text('СПОРТЫН ЗААЛ, ТАЛБАЙ', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 20)),
+              SizedBox(height: 6),
+              Text('Сул цагийг хараад хүссэн өдрөө захиалаарай.', style: TextStyle(color: Colors.white70)),
+            ]),
+          ),
+          const SizedBox(height: 14),
+          Card(child: Padding(padding: const EdgeInsets.all(14), child: Column(children: [
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.calendar_month),
+              title: const Text('Захиалах өдөр'),
+              subtitle: Text(_dateText(_selectedDate)),
+              trailing: const Icon(Icons.edit_calendar),
+              onTap: () async {
+                final picked = await showDatePicker(
+                  context: context,
+                  initialDate: _selectedDate,
+                  firstDate: DateTime.now(),
+                  lastDate: DateTime.now().add(const Duration(days: 180)),
+                );
+                if (picked != null) { setState(() => _selectedDate = picked); await _load(); }
+              },
+            ),
+            TextField(controller: _sport, decoration: const InputDecoration(labelText: 'Спортын төрөл', prefixIcon: Icon(Icons.sports))),
+            const SizedBox(height: 10),
+            TextField(controller: _region, decoration: const InputDecoration(labelText: 'Байршил / дүүрэг', prefixIcon: Icon(Icons.location_on_outlined))),
+            const SizedBox(height: 10),
+            SizedBox(width: double.infinity, child: FilledButton.icon(onPressed: _loading ? null : _load, icon: const Icon(Icons.search), label: const Text('СУЛ ЦАГ ХАЙХ'))),
+          ]))),
+          const SizedBox(height: 14),
+          Row(children: [
+            const Expanded(child: Text('СУЛ ЦАГИЙН ЖАГСААЛТ', style: TextStyle(fontWeight: FontWeight.w900))),
+            Text('${_slots.length} цаг'),
+          ]),
+          if (_loading) const LinearProgressIndicator(),
+          if (_error != null) Padding(padding: const EdgeInsets.symmetric(vertical: 12), child: Text(_error!, style: const TextStyle(color: Colors.red))),
+          if (!_loading && _slots.isEmpty && _error == null)
+            const Card(child: Padding(padding: EdgeInsets.all(18), child: Text('Энэ өдөрт тохирох сул цаг олдсонгүй. Өөр өдөр сонгоод хайна уу.'))),
+          ..._slots.map((slot) => Card(
+            margin: const EdgeInsets.only(top: 10),
+            child: Padding(padding: const EdgeInsets.all(14), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(slot['venue_name']?.toString() ?? 'Спортын заал', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+              const SizedBox(height: 5),
+              Text(slot['venue_address']?.toString() ?? ''),
+              Text('${slot['sport']} • ${slot['start_time']}–${slot['end_time']}'),
+              const SizedBox(height: 8),
+              Text(_price(slot['price']), style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF245FC7))),
+              const SizedBox(height: 8),
+              SizedBox(width: double.infinity, child: FilledButton(onPressed: _saving ? null : () => _book(slot), child: const Text('ЭНЭ ЦАГИЙГ ЗАХИАЛАХ'))),
+            ])),
+          )),
+          const SizedBox(height: 18),
+          OutlinedButton.icon(onPressed: _saving ? null : _addSlot, icon: const Icon(Icons.add_business), label: const Text('ЗААЛЫНХАА СУЛ ЦАГИЙГ НЭМЭХ')),
+          const SizedBox(height: 20),
+          const Text('МИНИЙ ЗАХИАЛГУУД', style: TextStyle(fontWeight: FontWeight.w900)),
+          const SizedBox(height: 8),
+          if (_bookings.isEmpty) const Text('Одоогоор захиалга алга.'),
+          ..._bookings.map((booking) => Card(
+            child: ListTile(
+              leading: const Icon(Icons.event_available),
+              title: Text('Захиалга #${booking['id']}'),
+              subtitle: Text(_status(booking['status']?.toString())),
+              trailing: booking['status'] == 'pending' || booking['status'] == 'confirmed'
+                  ? TextButton(onPressed: _saving ? null : () => _perform('/venues/bookings/${booking['id']}/cancel', {}), child: const Text('Цуцлах'))
+                  : null,
+            ),
+          )),
+          const SizedBox(height: 14),
+          const Text('Тайлбар: Заал эзэмшигчийн бүртгэл админаар баталгаажсан байх шаардлагатай. Захиалга эхлээд хүсэлт хэлбэрээр очиж, эзэмшигч баталгаажуулна.', style: TextStyle(fontSize: 12, color: Colors.blueGrey)),
+        ]),
+      ),
+    );
+  }
+}
+);
+            if (!timePattern.hasMatch(start.text.trim()) || !timePattern.hasMatch(end.text.trim())) {
+              ScaffoldMessenger.of(dialogContext).showSnackBar(const SnackBar(content: Text('Цагийг HH:MM хэлбэрээр оруулна уу.')));
+              return;
+            }
             Navigator.pop(dialogContext, true);
           }, child: const Text('ЦАГ НЭМЭХ')),
         ],
