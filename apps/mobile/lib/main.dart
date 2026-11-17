@@ -1100,10 +1100,33 @@ class _ProfilePageState extends State<ProfilePage> {
       _location.text = prefs.getString('${_keyPrefix}location') ?? '';
       final savedRole = prefs.getString('${_keyPrefix}role');
       final savedSport = prefs.getString('${_keyPrefix}sport');
+
+      // Local values remain available offline; authenticated server data takes priority.
+      if (ApiConfig.isConfigured) {
+        final token = await const FlutterSecureStorage().read(key: 'arena_access_token');
+        if (token != null && token.isNotEmpty) {
+          final api = ApiClient();
+          try {
+            final remote = await AuthRepository(api).getProfile(token);
+            _name.text = remote['full_name']?.toString() ?? _name.text;
+            _location.text = remote['region']?.toString() ?? _location.text;
+            final remoteSport = remote['sport']?.toString();
+            if (_sports.contains(remoteSport)) _sport = remoteSport!;
+            await prefs.setString('${_keyPrefix}name', _name.text);
+            await prefs.setString('${_keyPrefix}location', _location.text);
+            await prefs.setString('${_keyPrefix}sport', _sport);
+          } catch (_) {
+            // Keep the locally saved profile if the server is unavailable or not set up yet.
+          } finally {
+            api.close();
+          }
+        }
+      }
+
       if (mounted) {
         setState(() {
           if (_roles.contains(savedRole)) _role = savedRole!;
-          if (_sports.contains(savedSport)) _sport = savedSport!;
+          if (_sports.contains(savedSport) && _name.text.isEmpty) _sport = savedSport!;
           _loading = false;
           _saved = _name.text.trim().isNotEmpty;
         });
@@ -1122,13 +1145,39 @@ class _ProfilePageState extends State<ProfilePage> {
       await prefs.setString('${_keyPrefix}location', _location.text.trim());
       await prefs.setString('${_keyPrefix}role', _role);
       await prefs.setString('${_keyPrefix}sport', _sport);
+
+      var syncedToServer = false;
+      if (ApiConfig.isConfigured) {
+        final token = await const FlutterSecureStorage().read(key: 'arena_access_token');
+        if (token != null && token.isNotEmpty) {
+          final api = ApiClient();
+          try {
+            await AuthRepository(api).saveProfile(
+              token: token,
+              fullName: _name.text.trim(),
+              sport: _sport,
+              region: _location.text.trim(),
+            );
+            syncedToServer = true;
+          } catch (_) {
+            // Local save is retained if server sync fails.
+          } finally {
+            api.close();
+          }
+        }
+      }
+
       if (!mounted) return;
       setState(() {
         _saving = false;
         _saved = true;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Профайл энэ төхөөрөмжид хадгалагдлаа.')),
+        SnackBar(
+          content: Text(syncedToServer
+              ? 'Профайл серверт болон төхөөрөмжид хадгалагдлаа.'
+              : 'Профайл төхөөрөмжид хадгалагдлаа. Серверийн синк хийгдээгүй.'),
+        ),
       );
     } catch (_) {
       if (mounted) {
@@ -1294,7 +1343,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                       const SizedBox(height: 12),
                       const Text(
-                        'Анхааруулга: энэ шатанд профайл зөвхөн тухайн утсанд хадгалагдана. Серверийн бүртгэл, SMS баталгаажуулалт болон бусад төхөөрөмжтэй синк хараахан холбогдоогүй.',
+                        'Овог нэр, спорт, байршил сервер тохируулагдсан үед нэгдсэн профайлд синк хийгдэнэ. Хэрэглэгчийн эрхийг админ баталгаажуулна.',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 11,
