@@ -5,6 +5,7 @@ on:
     branches:
       - feature/arena360-tournament-module
       - feature/arena360-quality-hardening
+      - feature/arena360-quality-hardening
     paths:
       - "backend/**"
       - "apps/mobile/**"
