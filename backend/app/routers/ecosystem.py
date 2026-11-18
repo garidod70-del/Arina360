@@ -450,7 +450,16 @@ def verify_qr_pass(payload: QrVerifyInput, user: User = Depends(get_current_user
         allowed = allowed or (club is not None and club.owner_id == user.id)
     if not allowed:
         raise HTTPException(status_code=403, detail="Энэ QR кодыг баталгаажуулах эрхгүй.")
-    item.used_at = now
+    # Claim the pass atomically. A read-then-write check alone can allow two
+    # concurrent scanners to accept the same token on databases without row locks.
+    claimed = db.query(QrPass).filter(
+        QrPass.id == item.id,
+        QrPass.used_at.is_(None),
+        QrPass.expires_at > now,
+    ).update({QrPass.used_at: now}, synchronize_session=False)
+    if claimed != 1:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Энэ QR код өмнө нь ашиглагдсан эсвэл хугацаа нь дууссан байна.")
     _notify(db, item.owner_id, "QR бүртгэл баталгаажлаа", f"{item.purpose} эрх амжилттай шалгагдлаа.", "qr")
     db.commit()
     return {"valid": True, "used": True, "purpose": item.purpose, "reference_type": item.reference_type,
