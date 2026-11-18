@@ -834,7 +834,12 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
                   child: const Text('ХҮСЭЛТ ЦУЦЛАХ'),
                 ),
               ),
-            if (isRequester && status == 'accepted' && request['payment_status'] != 'paid')\n              Align(alignment: Alignment.centerRight, child: FilledButton.icon(\n                onPressed: _saving ? null : () => _payServiceRequest(id),\n                icon: const Icon(Icons.qr_code_2), label: const Text('QPAY-ЭЭР ТӨЛӨХ'),\n              )),\n            if ((isRequester || isProvider) && status == 'accepted' && request['payment_status'] == 'paid')
+            if (isRequester && status == 'accepted' && request['payment_status'] != 'paid')
+              Align(alignment: Alignment.centerRight, child: FilledButton.icon(
+                onPressed: _saving ? null : () => _payServiceRequest(id),
+                icon: const Icon(Icons.qr_code_2), label: const Text('QPAY-ЭЭР ТӨЛӨХ'),
+              )),
+            if ((isRequester || isProvider) && status == 'accepted' && request['payment_status'] == 'paid')
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
