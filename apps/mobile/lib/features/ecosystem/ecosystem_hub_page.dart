@@ -190,7 +190,7 @@ class _QrPassPageState extends _EcosystemState<QrPassPage> {
   @override void dispose() { verifyInput.dispose(); super.dispose(); }
   Future<void> issue() async {
     final data = await form('QR эрх үүсгэх', const [
-      _Input('purpose', 'Зориулалт', initial: 'event_entry'),
+      _Input('purpose', 'Зориулалт', initial: 'event_entry', options: ['event_entry', 'course_attendance', 'fitness_checkin']),
       _Input('reference_type', 'Холбоосын төрөл', initial: 'fitness_pass', options: ['fitness_pass', 'competition', 'club']),
       _Input('reference_id', 'Холбоосын ID', initial: '1', number: true),
       _Input('expires_in_minutes', 'Хүчинтэй минут', initial: '60', number: true),
@@ -321,7 +321,7 @@ class _ClubPageState extends _EcosystemState<ClubPage> {
   Future<void> coach() async {
     final data = await form('Дасгалжуулагчийн профайл', const [
       _Input('club_id', 'Клубын ID (0 бол байхгүй)', initial: '0', number: true),
-      _Input('sport', 'Спортын төрөл', initial: 'Жүдо'), _Input('qualification', 'Мэргэжлийн үнэмлэх'),
+      _Input('sport', 'Спортын төрөл', initial: 'Жүдо', options: ['Жүдо', 'Самбо', 'Чөлөөт бөх', 'Үндэсний бөх', 'Бокс', 'Волейбол', 'Сагсан бөмбөг', 'Хөл бөмбөг', 'Таеквондо', 'Каратэ', 'Гимнастик', 'Бусад']), _Input('qualification', 'Мэргэжлийн үнэмлэх'),
       _Input('experience_years', 'Ажилласан жил', initial: '0', number: true),
       _Input('specialties', 'Мэргэшсэн чиглэл'),
     ]);
@@ -378,7 +378,7 @@ class _StorePageState extends _EcosystemState<StorePage> {
   Future<void> addProduct() async {
     final data = await form('Бараа нэмэх', const [
       _Input('title', 'Барааны нэр'), _Input('description', 'Тайлбар'),
-      _Input('category', 'Ангилал'), _Input('price', 'Үнэ ₮', number: true), _Input('stock', 'Үлдэгдэл', number: true),
+      _Input('category', 'Ангилал', options: ['Хувцас', 'Гутал', 'Бээлий, хамгаалалт', 'Бэлтгэлийн хэрэгсэл', 'Жин, сэргээх хэрэгсэл', 'Бусад']), _Input('price', 'Үнэ ₮', number: true), _Input('stock', 'Үлдэгдэл', number: true),
     ]);
     if (data == null) return;
     await work((t) async { await api.postAuthorized('/store/products', token: t, body: data); await refresh(); });
