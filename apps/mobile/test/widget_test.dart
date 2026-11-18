@@ -134,7 +134,6 @@ void main() {
     );
     expect(tester.takeException(), isNull);
   });
-}
 
   testWidgets('ecosystem hub opens every public and admin module', (tester) async {
     tester.view.physicalSize = const Size(1080, 1920);
@@ -169,4 +168,4 @@ void main() {
     await openModule('Миний орлого', ProviderEarningsPage);
     await openModule('Админ аналитик', AnalyticsPage);
   });
-
+}
