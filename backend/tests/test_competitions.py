@@ -53,6 +53,11 @@ def test_single_elimination_tournament_registration_draw_and_results():
         assert public.status_code == 200
         assert any(item["id"] == tournament_id for item in public.json())
 
+        public_participants = client.get(f"/api/v1/competitions/{tournament_id}/participants")
+        assert public_participants.status_code == 200
+        assert "contact_phone" not in public_participants.json()[0]
+        assert "user_id" not in public_participants.json()[0]
+
         draw = client.post(f"/api/v1/competitions/{tournament_id}/draw", headers=organizer_headers)
         assert draw.status_code == 201
         first_round = [item for item in draw.json() if item["round_number"] == 1]
