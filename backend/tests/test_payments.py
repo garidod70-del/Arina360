@@ -119,6 +119,13 @@ def test_qpay_store_checkout_uses_registered_phone_and_splits_five_percent(monke
         buyer_phone = f"+97678{suffix}"
         buyer_headers = register(client, buyer_phone)
         seller_headers = register(client, f"+97679{suffix}")
+        admin_phone = f"+97670{suffix}"
+        admin_headers = register(client, admin_phone)
+        from app.models import UserRole
+        with SessionLocal() as db:
+            admin_user = db.query(User).filter_by(phone=admin_phone).one()
+            db.add(UserRole(user_id=admin_user.id, role="admin"))
+            db.commit()
 
         product = client.post("/api/v1/store/products", headers=seller_headers, json={
             "title": "Тест спорт бараа", "description": "Төлбөрийн урсгалын тест",
@@ -182,6 +189,30 @@ def test_qpay_store_checkout_uses_registered_phone_and_splits_five_percent(monke
         order_notifications = [x for x in notifications.json() if x["category"] == "order"]
         assert order_notifications
         assert any(buyer_phone in x["body"] for x in order_notifications)
+
+        monkeypatch.setattr(payment_router, "refund_payment", lambda _payment_id: {})
+        refunded = client.post(
+            f"/api/v1/payments/qpay/invoices/{invoice.json()['id']}/refund",
+            headers=admin_headers, json={},
+        )
+        assert refunded.status_code == 200, refunded.text
+        assert refunded.json()["status"] == "refunded"
+        assert refunded.json()["refund_amount"] == 50_000
+        assert refunded.json()["commission_reversed"] == 2_500
+
+        from app.ecosystem_models import ShopOrder
+        from app.qpay_models import QPayInvoice
+        with SessionLocal() as db:
+            settled = db.query(PaymentTransaction).filter_by(
+                provider="qpay", order_id=str(order.json()["id"]),
+            ).one()
+            stored_order = db.get(ShopOrder, order.json()["id"])
+            stored_invoice = db.get(QPayInvoice, invoice.json()["id"])
+            assert settled.refunded_amount == 50_000
+            assert settled.refunded_commission == 2_500
+            assert settled.status == "refunded"
+            assert stored_order.payment_status == "refunded"
+            assert stored_invoice.status == "refunded"
 
 
 def test_multi_seller_store_payment_splits_commission_once_and_notifies_once(monkeypatch):
