@@ -146,6 +146,6 @@ jobs:
         with:
           tag_name: ${{ steps.appver.outputs.tag }}
           name: ARENA 360 ${{ steps.appver.outputs.version }}
-          target_commitish: main
+          target_commitish: ${{ github.ref_name }}
           files: release-output/arena360.apk
           generate_release_notes: true
