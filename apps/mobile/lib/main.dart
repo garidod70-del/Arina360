@@ -1282,6 +1282,13 @@ class _ProfilePageState extends State<ProfilePage> {
     'Сагсан бөмбөг', 'Волейбол', 'Хөлбөмбөг',
     'Бокс', 'Таеквондо', 'Гимнастик', 'Бусад',
   ];
+  static const _regions = <String>[
+    'Улаанбаатар', 'Архангай', 'Баян-Өлгий', 'Баянхонгор',
+    'Булган', 'Говь-Алтай', 'Говьсүмбэр', 'Дархан-Уул',
+    'Дорноговь', 'Дорнод', 'Дундговь', 'Завхан', 'Орхон',
+    'Өвөрхангай', 'Өмнөговь', 'Сүхбаатар', 'Сэлэнгэ',
+    'Төв', 'Увс', 'Ховд', 'Хөвсгөл', 'Хэнтий',
+  ];
 
   String get _keyPrefix => 'arena360.profile.${widget.phone}.';
 
@@ -1511,12 +1518,20 @@ class _ProfilePageState extends State<ProfilePage> {
                         },
                       ),
                       const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _location,
+                      DropdownButtonFormField<String>(
+                        value: _regions.contains(_location.text) ? _location.text : null,
+                        isExpanded: true,
                         decoration: const InputDecoration(
                           labelText: 'Аймаг / хот, дүүрэг',
                           prefixIcon: Icon(Icons.location_on_outlined),
                         ),
+                        items: _regions.map((region) => DropdownMenuItem(
+                          value: region,
+                          child: Text(region),
+                        )).toList(),
+                        onChanged: (value) {
+                          if (value != null) setState(() => _location.text = value);
+                        },
                       ),
                       const SizedBox(height: 20),
                       SizedBox(
