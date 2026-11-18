@@ -748,8 +748,8 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
 
 
   Future<void> _payServiceRequest(int requestId) async {
-    final token = await _token();
-    if (token == null) return;
+    final token = await _readToken();
+    if (token == null || token.isEmpty) return;
     try {
       await QPayPaymentDialog.open(
         context: context, api: _api, token: token,
