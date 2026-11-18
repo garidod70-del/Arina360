@@ -32,7 +32,7 @@ def _booking_out(item: RefereeBooking) -> RefereeBookingOutput:
         venue=item.venue, referee_count=item.referee_count, payment_type=item.payment_type,
         unit_fee=item.unit_fee, work_days=item.work_days, transport_fee=item.transport_fee,
         food_fee=item.food_fee, total_amount=total, contact_name=item.contact_name,
-        contact_phone=item.contact_phone, notes=item.notes, status=item.status, created_at=item.created_at,
+        contact_phone=item.contact_phone, notes=item.notes, status=item.status, payment_status=item.payment_status, created_at=item.created_at,
     )
 
 
