@@ -65,6 +65,7 @@ void main() {
     expect(tester.takeException(), isNull);
 
     await tester.ensureVisible(find.text('Спорт барааны дэлгүүр'));
+    await tester.ensureVisible(find.text('Спорт барааны дэлгүүр'));
     await tester.tap(find.text('Спорт барааны дэлгүүр'));
     await tester.pump(const Duration(milliseconds: 800));
     expect(
