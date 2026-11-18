@@ -69,6 +69,19 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
     'clubs_training': ['Насны ангилал', 'Бэлтгэлийн түвшин (анхан / дунд / ахисан)', 'Сонирхож буй хуваарь'],
   };
 
+  static const Map<String, List<String>> _quickRequestOptions = {
+    'coach': ['Ганцаарчилсан бэлтгэл', 'Багийн бэлтгэл', 'Хүүхдийн бэлтгэл', 'Тэмцээний бэлтгэл'],
+    'sports_doctor': ['Ерөнхий үзлэг', 'Гэмтлийн үнэлгээ', 'Тэмцээний өмнөх үзлэг', 'Зөвлөгөө авах'],
+    'strength_specialist': ['Ерөнхий хүч хөгжүүлэх', 'Тэсрэлттэй хүч', 'Хурд, хөдөлгөөний чадвар', 'Биеийн бэлтгэлийн үнэлгээ'],
+    'sports_psychologist': ['Сэтгэл зүйн зөвлөгөө', 'Тэмцээний өмнөх бэлтгэл', 'Анхаарал төвлөрөл'],
+    'sports_nutritionist': ['Хооллолтын төлөвлөгөө', 'Жингийн зохицуулалт', 'Тэмцээний үеийн хооллолт'],
+    'physiotherapist': ['Нөхөн сэргээх үйлчилгээ', 'Хөдөлгөөн засал', 'Гэмтлээс урьдчилан сэргийлэх'],
+    'sports_analyst': ['Техник шинжилгээ', 'Тактикийн шинжилгээ', 'Тэмцээний статистик'],
+    'venue_booking': ['Бэлтгэлийн заал захиалах', 'Тэмцээний талбай захиалах', 'Сургалтын цаг захиалах'],
+    'sports_store': ['Бараа худалдан авах', 'Барааны хэмжээ, загвар асуух', 'Бөөнөөр захиалах'],
+    'clubs_training': ['Клубт элсэх', 'Туршилтын бэлтгэлд оролцох', 'Сургалтын хуваарь авах'],
+  };
+
   static const Map<String, List<String>> _providerExtraFields = {
     'coach': ['Заадаг насны ангилал', 'Бэлтгэлийн чиглэл', 'Бэлтгэлийн хуваарь'],
     'sports_doctor': ['Мэргэшил', 'Үзлэгийн чиглэл', 'Цаг авах боломж'],
@@ -201,7 +214,8 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
   Future<void> _showRequestForm(Map<String, dynamic> provider) async {
     final formKey = GlobalKey<FormState>();
     final title = TextEditingController(text: _requestTitleLabel);
-    final details = TextEditingController();
+    final quickOptions = _quickRequestOptions[_category] ?? const ['Үйлчилгээ авах хүсэлт'];
+    final details = TextEditingController(text: quickOptions.first);
     final savedSport = _profile['sport']?.toString() ?? '';
     final sport = TextEditingController(text: _sportOptions.contains(savedSport) ? savedSport : '');
     final region = TextEditingController(text: _profile['region']?.toString().isNotEmpty == true ? _profile['region'].toString() : _regionController.text.trim());
@@ -229,17 +243,18 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
                         : null,
                   ),
                   const SizedBox(height: 10),
-                  TextFormField(
-                    controller: details,
-                    minLines: 3,
-                    maxLines: 5,
+                  DropdownButtonFormField<String>(
+                    value: quickOptions.contains(details.text) ? details.text : quickOptions.first,
+                    isExpanded: true,
                     decoration: InputDecoration(
-                      labelText: 'Дэлгэрэнгүй хүсэлт',
-                      hintText: _requestPrompts[_category],
+                      labelText: 'Хүсэлтийн төрлөө сонгоно уу',
+                      helperText: _requestPrompts[_category],
                     ),
-                    validator: (value) => (value ?? '').trim().length < 5
-                        ? 'Хүсэлтээ дэлгэрэнгүй бичнэ үү.'
-                        : null,
+                    items: quickOptions.map((option) => DropdownMenuItem(
+                      value: option,
+                      child: Text(option),
+                    )).toList(),
+                    onChanged: (value) => details.text = value ?? quickOptions.first,
                   ),
                   ...extraValues.entries.map((entry) => Padding(
                     padding: const EdgeInsets.only(top: 10),
