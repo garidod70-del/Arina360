@@ -34,6 +34,7 @@ def test_payment_is_idempotent_and_partial_refunds_reverse_commission_proportion
         payment_id = payment.id
         assert payment.commission_amount == 5_000
         assert payment.provider_net_amount == 95_000
+        db.commit()
 
         duplicate, duplicate_created = record_payment(
             db, provider="qpay", external_payment_id=f"invoice-{suffix}",
