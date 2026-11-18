@@ -312,8 +312,13 @@ def checkout(payload: CheckoutInput, user: User = Depends(get_current_user), db:
     registered_phone = (user.phone or "").strip()
     if len(registered_phone) < 8:
         raise HTTPException(status_code=422, detail="Захиалга хийхийн өмнө профайлдаа утасны дугаараа баталгаажуулна уу.")
-    order = ShopOrder(user_id=user.id, total_amount=total, delivery_address=payload.delivery_address.strip(),
-                      contact_phone=registered_phone, status="pending_payment")
+    is_free_order = total == 0
+    order = ShopOrder(
+        user_id=user.id, total_amount=total, delivery_address=payload.delivery_address.strip(),
+        contact_phone=registered_phone,
+        status="paid" if is_free_order else "pending_payment",
+        payment_status="free" if is_free_order else "unpaid",
+    )
     db.add(order)
     db.flush()
     for row, product in locked:
@@ -321,6 +326,12 @@ def checkout(payload: CheckoutInput, user: User = Depends(get_current_user), db:
                              unit_price=product.price, quantity=row.quantity))
         product.stock -= row.quantity
         db.delete(row)
+        if is_free_order:
+            _notify(
+                db, product.seller_id, "Үнэгүй захиалга ирлээ",
+                f"{product.title} × {row.quantity}. Захиалагч: {registered_phone}. "
+                f"Захиалгын №{order.id}. Хүргэлт: {order.delivery_address}", "order",
+            )
     db.commit()
     db.refresh(order)
     return {"id": order.id, "total_amount": order.total_amount, "status": order.status,
