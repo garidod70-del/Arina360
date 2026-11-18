@@ -3,6 +3,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../../core/config/api_config.dart';
 import '../../core/network/api_client.dart';
+import '../../core/widgets/qpay_payment_dialog.dart';
 
 class ApiRefereeBookingPage extends StatefulWidget {
   const ApiRefereeBookingPage({super.key});
@@ -30,6 +31,7 @@ class _ApiRefereeBookingPageState extends State<ApiRefereeBookingPage> {
   List<Map<String, dynamic>> _requests = [];
   List<Map<String, dynamic>> _referees = [];
   int? _selectedRefereeId;
+  int? _currentUserId;
 
   @override
   void initState() {
@@ -77,6 +79,7 @@ class _ApiRefereeBookingPageState extends State<ApiRefereeBookingPage> {
       setState(() {
         _requests = results[0];
         _referees = results[1];
+        _currentUserId = account['id'] as int?;
         if (_selectedRefereeId == null && _referees.isNotEmpty) _selectedRefereeId = _referees.first['user_id'] as int;
       });
     } catch (e) {
@@ -139,6 +142,26 @@ class _ApiRefereeBookingPageState extends State<ApiRefereeBookingPage> {
       if (mounted) setState(() => _error = e.toString());
     } finally {
       if (mounted) setState(() => _busy = false);
+    }
+  }
+
+
+  Future<void> _payReferee(int id) async {
+    final token = await _token();
+    if (token == null) return;
+    try {
+      await QPayPaymentDialog.open(
+        context: context, api: _api, token: token,
+        orderType: 'referee_booking', orderId: id,
+        onPaid: () {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Шүүгчийн төлбөр баталгаажлаа.')));
+            _load();
+          }
+        },
+      );
+    } catch (error) {
+      if (mounted) setState(() => _error = error.toString());
     }
   }
 
@@ -258,13 +281,14 @@ class _ApiRefereeBookingPageState extends State<ApiRefereeBookingPage> {
               Text('${item['venue']} • ${item['event_at']}'),
               Text('Дүн: ${item['total_amount']} ₮ • Төлөв: $status'),
               if (status == 'pending') TextButton(onPressed: _busy ? null : () => _action(id, 'assign', sport: item['sport']?.toString()), child: const Text('Тохирох шүүгчид томилох')),
-              if (status == 'assigned') TextButton(onPressed: _busy ? null : () => _action(id, 'accept'), child: const Text('Томилгоо зөвшөөрөх')),
+              if (status == 'assigned' && item['requester_id'] == _currentUserId && item['payment_status'] != 'paid') TextButton(onPressed: _busy ? null : () => _payReferee(id), child: const Text('QPay-ээр төлөх')),
+              if (status == 'assigned' && item['referee_user_id'] == _currentUserId) TextButton(onPressed: _busy ? null : () => _action(id, 'accept'), child: const Text('Томилгоо зөвшөөрөх')),
               if (status == 'accepted') TextButton(onPressed: _busy ? null : () => _action(id, 'complete'), child: const Text('Ажил дууссан гэж тэмдэглэх')),
               if (status == 'completed' && item['referee_user_id'] != null) TextButton(onPressed: _busy ? null : () => _rate(id), child: const Text('Шүүгчид үнэлгээ өгөх')),
             ])));
           }),
           const SizedBox(height: 16),
-          const Text('Тайлбар: Захиалгын үнийн дүн нь урьдчилсан тооцоо. Онлайн төлбөр хараахан холбогдоогүй.', style: TextStyle(fontSize: 12, color: Colors.blueGrey)),
+          const Text('Тайлбар: Шүүгч томилогдсоны дараа захиалагч QPay-ээр төлбөрөө баталгаажуулна.', style: TextStyle(fontSize: 12, color: Colors.blueGrey)),
         ]),
       ),
     );
