@@ -90,6 +90,21 @@ def test_club_membership_and_coach_verification_workflow():
             json={"description": "Эрхгүй өөрчлөлт"},
         )
         assert denied_athlete_update.status_code == 403
+        manager_qr = client.post("/api/v1/qr/passes", headers=manager, json={
+            "purpose": "club_entry", "reference_type": "club",
+            "reference_id": club_id, "expires_in_minutes": 20,
+        })
+        assert manager_qr.status_code == 201
+        removed_manager = client.delete(
+            f"/api/v1/clubs/{club_id}/members/{manager_membership_id}",
+            headers=owner,
+        )
+        assert removed_manager.status_code == 200
+        revoked_manager_scan = client.post(
+            "/api/v1/qr/verify", headers=manager,
+            json={"token": manager_qr.json()["token"]},
+        )
+        assert revoked_manager_scan.status_code == 403
         reverified = client.post(
             f"/api/v1/admin/clubs/{club_id}/verify", headers=admin,
             json={"approved": True},
