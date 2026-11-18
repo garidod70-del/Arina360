@@ -202,10 +202,9 @@ class _AuthPageState extends State<AuthPage> {
     if (!_formKey.currentState!.validate() || _isSubmitting) return;
 
     if (!ApiConfig.isConfigured) {
-      // Keeps the existing prototype usable until the API is deployed.
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (_) => HomePage(phone: _phone.text.trim()),
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Серверийн хаяг тохируулаагүй байна. Бодит бүртгэл, нэвтрэлт ашиглах боломжгүй.'),
         ),
       );
       return;
@@ -340,7 +339,7 @@ class _AuthPageState extends State<AuthPage> {
                     Text(
                       ApiConfig.isConfigured
                           ? 'Нэгдсэн серверийн бүртгэл ашиглаж байна.'
-                          : 'Туршилтын горим: серверийн хаяг тохируулах хүртэл нэвтрэлт төхөөрөмж дээр туршилтаар ажиллана.',
+                          : 'Серверийн хаяг тохируулаагүй байна. Бодит ашиглалтад оруулахын өмнө тохируулна уу.',
                       textAlign: TextAlign.center,
                       style: const TextStyle(fontSize: 11, color: Colors.blueGrey),
                     ),
