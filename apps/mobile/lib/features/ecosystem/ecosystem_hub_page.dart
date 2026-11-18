@@ -118,12 +118,14 @@ abstract class _EcosystemState<T extends StatefulWidget> extends State<T> {
     return value?.toString() ?? '';
   }
 
-  Future<Map<String, dynamic>?> form(String title, List<_Input> inputs) async {
+  Future<Map<String, dynamic>?> form(String title, List<_Input> inputs, {bool autofillPhone = true}) async {
     final savedProfile = await profile();
     final ctrls = <String, TextEditingController>{};
     final selected = <String, String>{};
     for (final input in inputs) {
-      final fromProfile = _profileValue(savedProfile, input.key);
+      final fromProfile = !autofillPhone && (input.key == 'contact_phone' || input.key == 'phone')
+          ? ''
+          : _profileValue(savedProfile, input.key);
       final initial = fromProfile.isNotEmpty ? fromProfile : input.initial;
       ctrls[input.key] = TextEditingController(text: initial);
       if (input.options.isNotEmpty) {
@@ -388,7 +390,11 @@ class _StorePageState extends _EcosystemState<StorePage> {
     cart = await api.get('/store/cart', token: t); if (mounted) setState(() {}); toast('Сагсанд нэмэгдлээ.');
   });
   Future<void> checkout() async {
-    final data = await form('Захиалга үүсгэх', const [_Input('delivery_address', 'Хүргэлтийн хаяг'), _Input('contact_phone', 'Утас')]);
+    final data = await form(
+      'Захиалга үүсгэх',
+      const [_Input('delivery_address', 'Хүргэлтийн хаяг'), _Input('contact_phone', 'Утас')],
+      autofillPhone: false,
+    );
     if (data == null) return;
     await work((t) async { await api.postAuthorized('/store/checkout', token: t, body: data); await refresh(); toast('Захиалга үүслээ. Онлайн төлбөр холбогдоогүй.'); });
   }
