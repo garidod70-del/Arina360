@@ -17,7 +17,6 @@ class _ApiRefereeBookingPageState extends State<ApiRefereeBookingPage> {
   final _api = ApiClient();
   final _venue = TextEditingController();
   final _contactName = TextEditingController();
-  final _contactPhone = TextEditingController();
   final _fee = TextEditingController(text: '50000');
   final _count = TextEditingController(text: '1');
   final _notes = TextEditingController();
@@ -44,7 +43,6 @@ class _ApiRefereeBookingPageState extends State<ApiRefereeBookingPage> {
     _api.close();
     _venue.dispose();
     _contactName.dispose();
-    _contactPhone.dispose();
     _fee.dispose();
     _count.dispose();
     _notes.dispose();
@@ -111,7 +109,6 @@ class _ApiRefereeBookingPageState extends State<ApiRefereeBookingPage> {
         'transport_fee': 0,
         'food_fee': 0,
         'contact_name': _contactName.text.trim(),
-        'contact_phone': _contactPhone.text.trim(),
         'notes': _notes.text.trim().isEmpty ? null : _notes.text.trim(),
       });
       if (!mounted) return;
@@ -263,7 +260,6 @@ class _ApiRefereeBookingPageState extends State<ApiRefereeBookingPage> {
                 Expanded(child: _field('Нэгж үнэ (₮)', _fee, number: true)),
               ]),
               _field('Холбоо барих хүний нэр', _contactName),
-              _field('Холбоо барих утас', _contactPhone, number: true),
               _field('Нэмэлт тайлбар', _notes, maxLines: 2),
               FilledButton.icon(onPressed: _busy ? null : _createRequest, icon: const Icon(Icons.send), label: const Text('ЗАХИАЛГА ИЛГЭЭХ')),
             ])),
