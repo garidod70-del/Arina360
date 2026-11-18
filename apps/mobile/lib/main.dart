@@ -478,7 +478,7 @@ class _HomePageState extends State<HomePage> {
                       Icon(service.icon, color: Theme.of(context).colorScheme.primary, size: 30),
                       Text(
                         service.name,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.bold,
                           color: Theme.of(context).colorScheme.onSurface,
                         ),
