@@ -97,13 +97,13 @@ abstract class _EcosystemState<T extends StatefulWidget> extends State<T> {
 
   Future<Map<String, dynamic>> profile() async {
     if (_profileCache != null) return _profileCache!;
-    try {
-      final value = await api.get('/profile/me', token: await token());
-      _profileCache = value;
-      return value;
-    } catch (_) {
-      return const <String, dynamic>{};
-    }
+    final accessToken = await token();
+    Map<String, dynamic> saved = {};
+    Map<String, dynamic> account = {};
+    try { saved = await api.get('/profile/me', token: accessToken); } catch (_) {}
+    try { account = await api.get('/auth/me', token: accessToken); } catch (_) {}
+    _profileCache = {...saved, 'phone': account['phone']};
+    return _profileCache!;
   }
 
   String _profileValue(Map<String, dynamic> profile, String key) {
