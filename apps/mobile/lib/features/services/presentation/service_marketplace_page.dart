@@ -265,8 +265,10 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
                         : null,
                   ),
                   const SizedBox(height: 10),
-                  OutlinedButton.icon(
-                    onPressed: () async {
+                  TextFormField(
+                    controller: preferredDate,
+                    readOnly: true,
+                    onTap: () async {
                       final picked = await showDatePicker(
                         context: dialogContext,
                         initialDate: DateTime.now().add(const Duration(days: 1)),
@@ -277,8 +279,11 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
                         preferredDate.text = '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
                       }
                     },
-                    icon: const Icon(Icons.calendar_month),
-                    label: Text(preferredDate.text.isEmpty ? 'Хүссэн өдрөө сонгох (заавал биш)' : preferredDate.text),
+                    decoration: const InputDecoration(
+                      labelText: 'Хүссэн өдөр (заавал биш)',
+                      prefixIcon: Icon(Icons.calendar_month),
+                      hintText: 'Дарж өдөр сонгоно уу',
+                    ),
                   ),
                   const SizedBox(height: 10),
                   TextFormField(
