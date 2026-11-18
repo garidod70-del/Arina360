@@ -332,7 +332,7 @@ def checkout(payload: CheckoutInput, user: User = Depends(get_current_user), db:
 def my_orders(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     rows = db.query(ShopOrder).filter(ShopOrder.user_id == user.id).order_by(ShopOrder.created_at.desc()).limit(100).all()
     return [{"id": x.id, "total_amount": x.total_amount, "status": x.status,
-             "delivery_address": x.delivery_address, "created_at": x.created_at} for x in rows]
+             "delivery_address": x.delivery_address, "payment_status": x.payment_status, "created_at": x.created_at} for x in rows]
 
 
 @router.get("/notifications")
