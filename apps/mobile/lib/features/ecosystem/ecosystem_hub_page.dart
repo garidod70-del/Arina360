@@ -177,7 +177,7 @@ class _QrPassPageState extends _EcosystemState<QrPassPage> {
         const SizedBox(height: 8),
         OutlinedButton.icon(onPressed: busy ? null : scan, icon: const Icon(Icons.camera_alt), label: const Text('КАМЕРААР УНШУУЛАХ')),
         OutlinedButton.icon(onPressed: busy ? null : verify, icon: const Icon(Icons.verified), label: const Text('БАТАЛГААЖУУЛАХ')),
-        const Text('Камераар скан хийхийг дараагийн дэд шатанд холбоно.', style: TextStyle(fontSize: 11, color: Colors.blueGrey)),
+        const Text('QR кодыг камераар уншуулж, сервер дээр нэг удаа баталгаажуулна.', style: TextStyle(fontSize: 11, color: Colors.blueGrey)),
       ]))),
     ]),
   );
