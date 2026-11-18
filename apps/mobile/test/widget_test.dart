@@ -31,4 +31,30 @@ void main() {
     expect(find.text('ONE PLATFORM. ALL SPORTS.'), findsNothing);
     expect(find.text('Нэвтрэх'), findsOneWidget);
   });
+
+
+  testWidgets('home menu opens competition and ecosystem sections', (tester) async {
+    tester.view.physicalSize = const Size(1080, 1920);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      const MaterialApp(home: HomePage(phone: '99112233', roles: [])),
+    );
+    await tester.pump();
+
+    expect(find.text('СПОРТЫН ТЭМЦЭЭН'), findsOneWidget);
+    expect(find.text('НЭГДСЭН СПОРТЫН СИСТЕМ'), findsOneWidget);
+
+    await tester.tap(find.text('СПОРТЫН ТЭМЦЭЭН'));
+    await tester.pumpAndSettle();
+    expect(find.text('Спортын тэмцээн'), findsOneWidget);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('НЭГДСЭН СПОРТЫН СИСТЕМ'));
+    await tester.pumpAndSettle();
+    expect(find.text('ARINA 360 • Нэгдсэн систем'), findsOneWidget);
+  });
 }
