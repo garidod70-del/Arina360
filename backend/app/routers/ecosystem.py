@@ -182,7 +182,7 @@ def club_members(club_id: int, user: User = Depends(get_current_user), db: Sessi
 def decide_membership(club_id: int, membership_id: int, payload: MembershipDecision,
                       user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     club = _club_or_404(db, club_id)
-    if not _can_manage_club(club, user):
+    if not _can_manage_club(db, club, user):
         raise HTTPException(status_code=403, detail="Клубын эзэмшигч эсвэл админ шаардлагатай.")
     item = db.query(ClubMembership).filter_by(id=membership_id, club_id=club.id).first()
     if item is None:
@@ -200,7 +200,7 @@ def decide_membership(club_id: int, membership_id: int, payload: MembershipDecis
 def upsert_coach_profile(payload: CoachInput, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if payload.club_id is not None:
         club = _club_or_404(db, payload.club_id)
-        if not _can_manage_club(club, user):
+        if not _can_manage_club(db, club, user):
             raise HTTPException(status_code=403, detail="Энэ клубт дасгалжуулагч холбох эрхгүй.")
     item = db.query(CoachProfile).filter_by(user_id=user.id).first()
     values = payload.model_dump()
@@ -419,7 +419,7 @@ def issue_qr_pass(payload: QrIssueInput, user: User = Depends(get_current_user),
             raise HTTPException(status_code=403, detail="Тэмцээний QR үүсгэх эрхгүй.")
     elif payload.reference_type == "club":
         club = _club_or_404(db, payload.reference_id)
-        if not _can_manage_club(club, user):
+        if not _can_manage_club(db, club, user):
             raise HTTPException(status_code=403, detail="Клубын QR үүсгэх эрхгүй.")
     token = secrets.token_urlsafe(32)
     item = QrPass(token_hash=hashlib.sha256(token.encode()).hexdigest(), owner_id=owner_id,
@@ -653,7 +653,7 @@ class ProductUpdate(BaseModel):
 def update_club(club_id: int, payload: ClubUpdate,
                 user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     club = _club_or_404(db, club_id)
-    if not _can_manage_club(club, user):
+    if not _can_manage_club(db, club, user):
         raise HTTPException(status_code=403, detail="Клубын эзэмшигч эсвэл админ шаардлагатай.")
     for key, value in payload.model_dump(exclude_unset=True).items():
         if isinstance(value, str):
@@ -670,7 +670,7 @@ def update_club(club_id: int, payload: ClubUpdate,
 def update_membership_role(club_id: int, membership_id: int, payload: MembershipRoleInput,
                            user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     club = _club_or_404(db, club_id)
-    if not _can_manage_club(club, user):
+    if not _can_manage_club(db, club, user):
         raise HTTPException(status_code=403, detail="Клубын эзэмшигч эсвэл админ шаардлагатай.")
     membership = db.query(ClubMembership).filter_by(id=membership_id, club_id=club.id, status="active").first()
     if membership is None:
@@ -686,7 +686,7 @@ def update_membership_role(club_id: int, membership_id: int, payload: Membership
 def remove_club_member(club_id: int, membership_id: int,
                        user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     club = _club_or_404(db, club_id)
-    if not _can_manage_club(club, user):
+    if not _can_manage_club(db, club, user):
         raise HTTPException(status_code=403, detail="Клубын эзэмшигч эсвэл админ шаардлагатай.")
     membership = db.query(ClubMembership).filter_by(id=membership_id, club_id=club.id).first()
     if membership is None:
