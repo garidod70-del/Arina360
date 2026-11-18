@@ -23,6 +23,8 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
   List<Map<String, dynamic>> _providers = [];
   List<Map<String, dynamic>> _requests = [];
   int? _currentUserId;
+  Map<String, dynamic> _profile = {};
+  static const _sportOptions = <String>['Жүдо', 'Самбо', 'Чөлөөт бөх', 'Үндэсний бөх', 'Бокс', 'Волейбол', 'Сагсан бөмбөг', 'Хөл бөмбөг', 'Таеквондо', 'Каратэ', 'Гимнастик', 'Бусад'];
   bool _loading = false;
   bool _saving = false;
   String? _error;
@@ -166,7 +168,12 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
         token: token,
       );
       final requests = await _api.getList('/services/requests/me', token: token);
-      final currentUser = await _api.get('/auth/me', token: token);
+      final results = await Future.wait([
+        _api.get('/auth/me', token: token),
+        _api.get('/profile/me', token: token),
+      ]);
+      final currentUser = results[0];
+      final profile = results[1];
 
       if (!mounted) return;
 
@@ -174,6 +181,7 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
         _providers = providers;
         _requests = requests;
         _currentUserId = currentUser['id'] as int?;
+        _profile = profile;
       });
     } catch (error) {
       if (mounted) {
@@ -194,9 +202,10 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
     final formKey = GlobalKey<FormState>();
     final title = TextEditingController(text: _requestTitleLabel);
     final details = TextEditingController();
-    final sport = TextEditingController();
-    final region = TextEditingController(text: _regionController.text.trim());
-    final phone = TextEditingController();
+    final savedSport = _profile['sport']?.toString() ?? '';
+    final sport = TextEditingController(text: _sportOptions.contains(savedSport) ? savedSport : '');
+    final region = TextEditingController(text: _profile['region']?.toString().isNotEmpty == true ? _profile['region'].toString() : _regionController.text.trim());
+    final phone = TextEditingController(text: _profile['phone']?.toString() ?? '');
     final preferredDate = TextEditingController();
     final extraValues = {for (final label in _requestFields) label: TextEditingController()};
 
@@ -240,9 +249,12 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
                     ),
                   )),
                   const SizedBox(height: 10),
-                  TextFormField(
-                    controller: sport,
-                    decoration: const InputDecoration(labelText: 'Спортын төрөл (заавал биш)'),
+                  DropdownButtonFormField<String>(
+                    value: _sportOptions.contains(sport.text) ? sport.text : null,
+                    isExpanded: true,
+                    decoration: const InputDecoration(labelText: 'Спортын төрөл (сонгох)'),
+                    items: _sportOptions.map((value) => DropdownMenuItem(value: value, child: Text(value))).toList(),
+                    onChanged: (value) => sport.text = value ?? '',
                   ),
                   const SizedBox(height: 10),
                   TextFormField(
@@ -253,12 +265,20 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
                         : null,
                   ),
                   const SizedBox(height: 10),
-                  TextFormField(
-                    controller: preferredDate,
-                    decoration: const InputDecoration(
-                      labelText: 'Хүссэн өдөр (заавал биш)',
-                      hintText: 'YYYY-MM-DD',
-                    ),
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      final picked = await showDatePicker(
+                        context: dialogContext,
+                        initialDate: DateTime.now().add(const Duration(days: 1)),
+                        firstDate: DateTime.now(),
+                        lastDate: DateTime.now().add(const Duration(days: 365)),
+                      );
+                      if (picked != null) {
+                        preferredDate.text = '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+                      }
+                    },
+                    icon: const Icon(Icons.calendar_month),
+                    label: Text(preferredDate.text.isEmpty ? 'Хүссэн өдрөө сонгох (заавал биш)' : preferredDate.text),
                   ),
                   const SizedBox(height: 10),
                   TextFormField(
@@ -382,8 +402,9 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
     final formKey = GlobalKey<FormState>();
     final name = TextEditingController();
     final description = TextEditingController();
-    final sport = TextEditingController();
-    final region = TextEditingController();
+    final savedSport = _profile['sport']?.toString() ?? '';
+    final sport = TextEditingController(text: _sportOptions.contains(savedSport) ? savedSport : '');
+    final region = TextEditingController(text: _profile['region']?.toString() ?? '');
     final price = TextEditingController(text: '0');
     final credentials = TextEditingController();
     final extraValues = {for (final label in _providerFields) label: TextEditingController()};
@@ -418,9 +439,12 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
                         : null,
                   ),
                   const SizedBox(height: 10),
-                  TextFormField(
-                    controller: sport,
-                    decoration: const InputDecoration(labelText: 'Спортын төрөл (заавал биш)'),
+                  DropdownButtonFormField<String>(
+                    value: _sportOptions.contains(sport.text) ? sport.text : null,
+                    isExpanded: true,
+                    decoration: const InputDecoration(labelText: 'Спортын төрөл (сонгох)'),
+                    items: _sportOptions.map((value) => DropdownMenuItem(value: value, child: Text(value))).toList(),
+                    onChanged: (value) => sport.text = value ?? '',
                   ),
                   const SizedBox(height: 10),
                   TextFormField(
