@@ -1,4 +1,4 @@
-"""Add payment states to all priced order types and club membership fees.
+"""Add payment states to priced order types and club membership fees.
 
 Revision ID: 0011_order_payment_states
 Revises: 0010_qpay_settlement
@@ -11,24 +11,33 @@ down_revision = "0010_qpay_settlement"
 branch_labels = None
 depends_on = None
 
+COLUMNS = {
+    "clubs": ("membership_fee", sa.Integer(), "0"),
+    "club_memberships": ("payment_status", sa.String(20), "unpaid"),
+    "shop_orders": ("payment_status", sa.String(20), "unpaid"),
+    "referee_bookings": ("payment_status", sa.String(20), "unpaid"),
+    "service_requests": ("payment_status", sa.String(20), "unpaid"),
+    "venue_bookings": ("payment_status", sa.String(20), "unpaid"),
+}
+
 
 def upgrade():
-    op.add_column("clubs", sa.Column("membership_fee", sa.Integer(), nullable=False, server_default="0"))
-    op.add_column("club_memberships", sa.Column("payment_status", sa.String(20), nullable=False, server_default="unpaid"))
-    op.add_column("shop_orders", sa.Column("payment_status", sa.String(20), nullable=False, server_default="unpaid"))
-    op.add_column("referee_bookings", sa.Column("payment_status", sa.String(20), nullable=False, server_default="unpaid"))
-    op.add_column("service_requests", sa.Column("payment_status", sa.String(20), nullable=False, server_default="unpaid"))
-    op.add_column("venue_bookings", sa.Column("payment_status", sa.String(20), nullable=False, server_default="unpaid"))
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    for table, (column, column_type, default) in COLUMNS.items():
+        existing = {c["name"] for c in inspector.get_columns(table)}
+        if column not in existing:
+            op.add_column(table, sa.Column(column, column_type, nullable=False, server_default=default))
+    inspector = sa.inspect(bind)
     for table in ("club_memberships", "shop_orders", "referee_bookings", "service_requests", "venue_bookings"):
-        op.create_index(f"ix_{table}_payment_status", table, ["payment_status"])
+        index_name = f"ix_{table}_payment_status"
+        indexes = {idx["name"] for idx in inspector.get_indexes(table)}
+        if index_name not in indexes:
+            op.create_index(index_name, table, ["payment_status"])
 
 
 def downgrade():
     for table in ("club_memberships", "shop_orders", "referee_bookings", "service_requests", "venue_bookings"):
         op.drop_index(f"ix_{table}_payment_status", table_name=table)
-    op.drop_column("venue_bookings", "payment_status")
-    op.drop_column("service_requests", "payment_status")
-    op.drop_column("referee_bookings", "payment_status")
-    op.drop_column("shop_orders", "payment_status")
-    op.drop_column("club_memberships", "payment_status")
-    op.drop_column("clubs", "membership_fee")
+    for table, (column, _, _) in reversed(list(COLUMNS.items())):
+        op.drop_column(table, column)
