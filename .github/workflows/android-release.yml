@@ -61,7 +61,7 @@ jobs:
           PY
       - name: Validate production API endpoint
         env:
-          ARENA_API_BASE_URL: ${{ secrets.ARENA_API_BASE_URL }}
+          ARENA_API_BASE_URL: ${{ vars.ARENA_API_BASE_URL }}
         run: |
           python3 - <<'PY'
           import os
@@ -69,7 +69,7 @@ jobs:
           value = os.environ.get("ARENA_API_BASE_URL", "").strip().rstrip("/")
           parsed = urlsplit(value)
           if parsed.scheme != "https" or not parsed.hostname or parsed.path or parsed.query or parsed.fragment:
-              raise SystemExit("Set ARENA_API_BASE_URL to the public HTTPS API origin in repository Actions secrets.")
+              raise SystemExit("Set ARENA_API_BASE_URL to the public HTTPS API origin in repository Actions variables.")
           with open(os.environ["GITHUB_ENV"], "a") as env:
               env.write(f"ARENA_API_BASE_URL={value}\n")
           PY
