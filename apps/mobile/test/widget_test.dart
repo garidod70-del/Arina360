@@ -71,7 +71,7 @@ void main() {
       matching: find.byType(InkWell),
     ).first;
     await tester.tap(storeTile);
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 600));
     expect(find.byType(StorePage), findsOneWidget);
     expect(tester.takeException(), isNull);
 
@@ -149,6 +149,7 @@ void main() {
     Future<void> openModule(String label, Type pageType) async {
       final labelFinder = find.text(label);
       await tester.ensureVisible(labelFinder);
+      await tester.pumpAndSettle();
       await tester.tap(find.ancestor(
         of: labelFinder,
         matching: find.byType(InkWell),
