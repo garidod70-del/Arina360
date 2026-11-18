@@ -316,14 +316,15 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  TextFormField(
-                    controller: phone,
-                    keyboardType: TextInputType.phone,
-                    decoration: const InputDecoration(labelText: 'Холбоо барих утас'),
-                    validator: (value) => (value ?? '').trim().length < 8
-                        ? 'Утасны дугаараа зөв оруулна уу.'
-                        : null,
-                  ),
+                  if (_category != 'sports_store')
+                    TextFormField(
+                      controller: phone,
+                      keyboardType: TextInputType.phone,
+                      decoration: const InputDecoration(labelText: 'Холбоо барих утас'),
+                      validator: (value) => (value ?? '').trim().length < 8
+                          ? 'Утасны дугаараа зөв оруулна уу.'
+                          : null,
+                    ),
                 ],
               ),
             ),
@@ -403,7 +404,7 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
         'details': details,
         'sport': sport.isEmpty ? null : sport,
         'region': region,
-        'contact_phone': phone,
+        if (_category != 'sports_store') 'contact_phone': phone,
         'preferred_at': preferredDate.isEmpty
             ? null
             : DateTime.parse(preferredDate).toUtc().toIso8601String(),
