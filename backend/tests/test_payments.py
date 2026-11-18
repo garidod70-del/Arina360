@@ -182,3 +182,109 @@ def test_qpay_store_checkout_uses_registered_phone_and_splits_five_percent(monke
         order_notifications = [x for x in notifications.json() if x["category"] == "order"]
         assert order_notifications
         assert any(buyer_phone in x["body"] for x in order_notifications)
+
+
+def test_multi_seller_store_payment_splits_commission_once_and_notifies_once(monkeypatch):
+    from types import SimpleNamespace
+    from fastapi.testclient import TestClient
+    from app.main import app
+    from app.routers import payments as payment_router
+
+    def register(client, phone):
+        response = client.post("/api/v1/auth/register", json={
+            "phone": phone, "password": "secure-test-password",
+        })
+        assert response.status_code == 201, response.text
+        return {"Authorization": f"Bearer {response.json()['access_token']}"}
+
+    with TestClient(app) as client:
+        suffix = str(uuid.uuid4().int % 100000000).zfill(8)
+        buyer_phone = f"+97677{suffix}"
+        buyer_headers = register(client, buyer_phone)
+        seller_a_headers = register(client, f"+97676{suffix}")
+        seller_b_headers = register(client, f"+97675{suffix}")
+
+        products = []
+        for headers, title, price in (
+            (seller_a_headers, "Тест бараа A", 40_000),
+            (seller_b_headers, "Тест бараа B", 60_000),
+        ):
+            response = client.post("/api/v1/store/products", headers=headers, json={
+                "title": title, "description": "Олон худалдагчийн төлбөрийн тест",
+                "category": "training", "price": price, "stock": 2,
+            })
+            assert response.status_code == 201, response.text
+            products.append(response.json()["id"])
+
+        for product_id in products:
+            response = client.post("/api/v1/store/cart", headers=buyer_headers, json={
+                "product_id": product_id, "quantity": 1,
+            })
+            assert response.status_code == 200, response.text
+
+        order = client.post("/api/v1/store/checkout", headers=buyer_headers, json={
+            "delivery_address": "Улаанбаатар хот, олон худалдагчийн тест",
+        })
+        assert order.status_code == 201, order.text
+        assert order.json()["total_amount"] == 100_000
+
+        monkeypatch.setattr(payment_router, "get_settings", lambda: SimpleNamespace(
+            qpay_callback_url="https://api.example.test",
+        ))
+        invoice_id = "qpay-" + uuid.uuid4().hex
+        monkeypatch.setattr(payment_router, "create_invoice", lambda **kwargs: {
+            "invoice_id": invoice_id, "qr_text": "qpay-test-qr",
+            "qr_image": "", "qPay_shortUrl": "https://qpay.mn/test", "urls": [],
+        })
+        invoice = client.post("/api/v1/payments/qpay/invoice", headers=buyer_headers, json={
+            "order_type": "store_order", "order_id": order.json()["id"],
+        })
+        assert invoice.status_code == 201, invoice.text
+
+        payment_ids = ["payment-" + uuid.uuid4().hex, "payment-" + uuid.uuid4().hex]
+        monkeypatch.setattr(payment_router, "check_invoice", lambda _invoice_id: {
+            "paid_amount": "100000.00",
+            "rows": [
+                {"payment_id": payment_ids[0], "payment_status": "PAID",
+                 "payment_amount": "40000.00", "payment_currency": "MNT"},
+                {"payment_id": payment_ids[1], "payment_status": "PAID",
+                 "payment_amount": "60000.00", "payment_currency": "MNT"},
+            ],
+        })
+
+        path = f"/api/v1/payments/qpay/invoices/{invoice.json()['id']}/check"
+        first = client.post(path, headers=buyer_headers, json={})
+        assert first.status_code == 200, first.text
+        second = client.post(path, headers=buyer_headers, json={})
+        assert second.status_code == 200, second.text
+        assert second.json()["already_confirmed"] is True
+
+        with SessionLocal() as db:
+            payment = db.query(PaymentTransaction).filter_by(
+                provider="qpay", external_payment_id=invoice_id,
+            ).one()
+            assert payment.gross_amount == 100_000
+            assert payment.commission_amount == 5_000
+            assert payment.provider_net_amount == 95_000
+            allocations = db.query(PaymentAllocation).filter_by(
+                payment_id=payment.id,
+            ).order_by(PaymentAllocation.provider_user_id).all()
+            assert len(allocations) == 2
+            assert sum(x.gross_amount for x in allocations) == 100_000
+            assert sum(x.commission_amount for x in allocations) == 5_000
+            assert sum(x.provider_net_amount for x in allocations) == 95_000
+            ledger_rows = db.query(CommissionLedger).filter_by(
+                payment_id=payment.id, event_type="paid",
+            ).all()
+            assert len(ledger_rows) == 1
+
+        for seller_headers in (seller_a_headers, seller_b_headers):
+            notifications = client.get("/api/v1/notifications", headers=seller_headers)
+            assert notifications.status_code == 200
+            order_notifications = [
+                item for item in notifications.json()
+                if item["category"] == "order" and str(order.json()["id"]) in item["body"]
+            ]
+            assert len(order_notifications) == 1
+            assert buyer_phone in order_notifications[0]["body"]
+
