@@ -846,14 +846,18 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
               ),
             ),
             const SizedBox(height: 10),
-            TextField(
-              controller: _regionController,
-              textInputAction: TextInputAction.search,
-              onSubmitted: (_) => _loadData(),
+            DropdownButtonFormField<String>(
+              value: _regions.contains(_regionController.text) ? _regionController.text : null,
+              isExpanded: true,
               decoration: const InputDecoration(
-                labelText: 'Аймаг / хот, дүүрэг',
+                labelText: 'Байршил (заавал биш)',
                 prefixIcon: Icon(Icons.location_on_outlined),
               ),
+              items: _regions.map((region) => DropdownMenuItem(value: region, child: Text(region))).toList(),
+              onChanged: (value) {
+                _regionController.text = value ?? '';
+                _loadData();
+              },
             ),
             const SizedBox(height: 10),
             SizedBox(
