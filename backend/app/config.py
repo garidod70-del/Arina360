@@ -1,4 +1,6 @@
 from functools import lru_cache
+from urllib.parse import urlsplit
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -32,12 +34,40 @@ class Settings(BaseSettings):
         return [item.strip() for item in self.cors_origins.split(",") if item.strip()]
 
 
+def validate_settings(settings: Settings) -> None:
+    """Fail closed when production settings are incomplete or unsafe."""
+    if settings.app_env.lower() != "production":
+        return
+
+    if settings.jwt_secret == "development-only-change-me" or len(settings.jwt_secret) < 32:
+        raise RuntimeError("Production requires a unique JWT_SECRET of at least 32 characters.")
+    if settings.auto_create_tables:
+        raise RuntimeError("Disable AUTO_CREATE_TABLES in production; use database migrations.")
+    if not settings.database_url.startswith(("postgres://", "postgresql://", "postgresql+psycopg://")):
+        raise RuntimeError("Production requires PostgreSQL; SQLite is for local development only.")
+
+    origins = settings.cors_origin_list
+    if not origins or any(
+        urlsplit(origin).scheme != "https"
+        or not urlsplit(origin).hostname
+        or urlsplit(origin).path not in ("", "/")
+        or urlsplit(origin).query
+        or urlsplit(origin).fragment
+        for origin in origins
+    ):
+        raise RuntimeError("Production CORS_ORIGINS must contain only HTTPS origins.")
+
+    if settings.qpay_base_url.rstrip("/") != "https://merchant.qpay.mn":
+        raise RuntimeError("Production QPay must use https://merchant.qpay.mn, not the sandbox.")
+    if not settings.qpay_client_id or not settings.qpay_client_secret or not settings.qpay_invoice_code:
+        raise RuntimeError("Production QPay client ID, client secret and invoice code are required.")
+    callback = urlsplit(settings.qpay_callback_url)
+    if callback.scheme != "https" or not callback.hostname:
+        raise RuntimeError("Production QPAY_CALLBACK_URL must be a public HTTPS API origin.")
+
+
 @lru_cache
 def get_settings() -> Settings:
     settings = Settings()
-    if settings.app_env.lower() == "production":
-        if settings.jwt_secret == "development-only-change-me" or len(settings.jwt_secret) < 32:
-            raise RuntimeError("Production requires a unique JWT_SECRET of at least 32 characters.")
-        if settings.auto_create_tables:
-            raise RuntimeError("Disable AUTO_CREATE_TABLES in production; use database migrations.")
+    validate_settings(settings)
     return settings
