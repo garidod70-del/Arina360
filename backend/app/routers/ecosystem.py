@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
-from sqlalchemy import case, func, or_
+from sqlalchemy import case, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -454,7 +454,7 @@ def verify_qr_pass(payload: QrVerifyInput, user: User = Depends(get_current_user
         allowed = allowed or (tournament is not None and tournament.organizer_id == user.id)
     if item.reference_type == "club":
         club = db.get(Club, item.reference_id)
-        allowed = allowed or (club is not None and club.owner_id == user.id)
+        allowed = allowed or (club is not None and _can_manage_club(db, club, user))
     if not allowed:
         raise HTTPException(status_code=403, detail="Энэ QR кодыг баталгаажуулах эрхгүй.")
     # Claim the pass atomically. A read-then-write check alone can allow two
@@ -587,7 +587,7 @@ def seller_orders(user: User = Depends(get_current_user), db: Session = Depends(
     order_ids = db.query(ShopOrderItem.order_id).join(
         Product, Product.id == ShopOrderItem.product_id
     ).filter(Product.seller_id == user.id).distinct().subquery()
-    rows = db.query(ShopOrder).filter(ShopOrder.id.in_(order_ids)).order_by(ShopOrder.created_at.desc()).limit(200).all()
+    rows = db.query(ShopOrder).filter(ShopOrder.id.in_(select(order_ids.c.order_id))).order_by(ShopOrder.created_at.desc()).limit(200).all()
     result = []
     for order in rows:
         items = db.query(ShopOrderItem).join(Product, Product.id == ShopOrderItem.product_id).filter(
