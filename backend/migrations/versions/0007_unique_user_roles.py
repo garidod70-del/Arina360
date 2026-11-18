@@ -5,6 +5,7 @@ Revises: 0006_ecosystem
 """
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy import inspect
 
 revision = "0007_unique_user_roles"
 down_revision = "0006_ecosystem"
@@ -23,13 +24,17 @@ def upgrade():
             GROUP BY user_id, role
         )
     """))
-    with op.batch_alter_table("user_roles") as batch_op:
-        batch_op.create_unique_constraint(
-            "uq_user_role",
-            ["user_id", "role"],
-        )
+    existing = inspect(op.get_bind()).get_unique_constraints("user_roles")
+    if not any(item.get("name") == "uq_user_role" for item in existing):
+        with op.batch_alter_table("user_roles") as batch_op:
+            batch_op.create_unique_constraint(
+                "uq_user_role",
+                ["user_id", "role"],
+            )
 
 
 def downgrade():
-    with op.batch_alter_table("user_roles") as batch_op:
-        batch_op.drop_constraint("uq_user_role", type_="unique")
+    existing = inspect(op.get_bind()).get_unique_constraints("user_roles")
+    if any(item.get("name") == "uq_user_role" for item in existing):
+        with op.batch_alter_table("user_roles") as batch_op:
+            batch_op.drop_constraint("uq_user_role", type_="unique")
