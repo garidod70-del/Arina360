@@ -71,7 +71,7 @@ jobs:
           if parsed.scheme != "https" or not parsed.hostname or parsed.path or parsed.query or parsed.fragment:
               raise SystemExit("Set ARENA_API_BASE_URL to the public HTTPS API origin in repository Actions secrets.")
           with open(os.environ["GITHUB_ENV"], "a") as env:
-              env.write(f"ARENA_API_BASE_URL={value}\\n")
+              env.write(f"ARENA_API_BASE_URL={value}\n")
           PY
       - name: Generate Android project and configure signing
         working-directory: apps/mobile
@@ -83,7 +83,7 @@ jobs:
           source = manifest.read_text()
           permission = '    <uses-permission android:name="android.permission.INTERNET" />'
           if "android.permission.INTERNET" not in source:
-              source = source.replace("<application", permission + "\\n    <application", 1)
+              source = source.replace("<application", permission + "\n    <application", 1)
               manifest.write_text(source)
           PY
           echo "$KEYSTORE_BASE64" | base64 --decode > android/app/arena-upload-key.jks
