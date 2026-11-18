@@ -58,7 +58,7 @@ class Arena360App extends StatelessWidget {
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: arenaThemeMode,
       builder: (context, mode, _) => MaterialApp(
-        title: 'ARINA 360',
+        title: 'ARENA 360',
         debugShowCheckedModeBanner: false,
         themeMode: mode,
         theme: ThemeData(
@@ -156,7 +156,7 @@ class _ArinaBrandLockup extends StatelessWidget {
         RichText(text: const TextSpan(
           style: TextStyle(fontSize: 31, fontWeight: FontWeight.w900, letterSpacing: 1.6),
           children: [
-            TextSpan(text: 'ARINA ', style: TextStyle(color: Color(0xFF8C63F6))),
+            TextSpan(text: 'ARENA ', style: TextStyle(color: Color(0xFF8C63F6))),
             TextSpan(text: '360', style: TextStyle(color: Color(0xFF3297FF))),
           ],
         )),
@@ -386,7 +386,7 @@ class _HomePageState extends State<HomePage> {
       showDialog<void>(
         context: context,
         builder: (dialogContext) => AlertDialog(
-          title: const Text('ARINA 360 шинэчлэлт'),
+          title: const Text('ARENA 360 шинэчлэлт'),
           content: Text('Шинэ хувилбар ${data['version']} бэлэн байна. Одоо шинэчлэх үү?'),
           actions: [
             TextButton(
@@ -414,7 +414,7 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('ARINA 360'),
+        title: const Text('ARENA 360'),
         actions: [
           IconButton(
             tooltip: arenaThemeMode.value == ThemeMode.dark ? 'Цайвар загвар руу шилжих' : 'Бараан загвар руу шилжих',
@@ -899,7 +899,7 @@ class _RefereeBookingPageState extends State<RefereeBookingPage> {
             child: const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('ARINA 360 / REFEREE',
+                Text('ARENA 360 / REFEREE',
                     style: TextStyle(color: Colors.white70,
                         fontWeight: FontWeight.bold)),
                 SizedBox(height: 8),
@@ -1156,7 +1156,7 @@ class _AppUpdatePageState extends State<AppUpdatePage> {
         apkUrl = data['apkUrl']?.toString();
         status = build > installedBuild
             ? 'Шинэ хувилбар бэлэн байна: ' + latestVersion!
-            : 'Таны ARINA 360 хамгийн сүүлийн хувилбар байна.';
+            : 'Таны ARENA 360 хамгийн сүүлийн хувилбар байна.';
       });
       if (build <= installedBuild && showCurrent && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Апп хамгийн сүүлийн хувилбартай байна.')));
@@ -1178,7 +1178,7 @@ class _AppUpdatePageState extends State<AppUpdatePage> {
     try {
       final permission = await Permission.requestInstallPackages.request();
       if (!permission.isGranted) {
-        if (mounted) setState(() => status = 'APK суулгах зөвшөөрөл шаардлагатай. ARINA 360-д зөвшөөрөл өгнө үү.');
+        if (mounted) setState(() => status = 'APK суулгах зөвшөөрөл шаардлагатай. ARENA 360-д зөвшөөрөл өгнө үү.');
         await openAppSettings();
         return;
       }
@@ -1206,7 +1206,7 @@ class _AppUpdatePageState extends State<AppUpdatePage> {
   Widget build(BuildContext context) {
     final hasUpdate = latestBuild != null && latestVersion != null && latestBuild! > 0 && apkUrl != null;
     return Scaffold(
-      appBar: AppBar(title: const Text('ARINA 360 шинэчлэлт')),
+      appBar: AppBar(title: const Text('ARENA 360 шинэчлэлт')),
       body: ListView(padding: const EdgeInsets.all(20), children: [
         Container(
           padding: const EdgeInsets.all(20),
@@ -1214,7 +1214,7 @@ class _AppUpdatePageState extends State<AppUpdatePage> {
           child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Icon(Icons.system_update_alt, color: Colors.white, size: 38),
             SizedBox(height: 12),
-            Text('ARINA 360 UPDATE', style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900)),
+            Text('ARENA 360 UPDATE', style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900)),
             SizedBox(height: 6),
             Text('Шинэ хувилбарыг шалгаж, утсан дээрээ шинэчлээрэй.', style: TextStyle(color: Colors.white70)),
           ]),
@@ -1425,7 +1425,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       Icon(Icons.account_circle, color: Colors.white, size: 42),
                       SizedBox(height: 10),
                       Text(
-                        'ARINA 360 PROFILE',
+                        'ARENA 360 PROFILE',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 20,
