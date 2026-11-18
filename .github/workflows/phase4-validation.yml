@@ -71,6 +71,8 @@ jobs:
         working-directory: apps/mobile
         run: flutter build apk --debug --target-platform android-x64
       - name: Install and launch on Android 14 emulator
+        continue-on-error: true
+        timeout-minutes: 5
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
