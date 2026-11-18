@@ -70,6 +70,7 @@ def record_payment(
         event_type="paid", gross_delta=amount, commission_delta=commission,
         provider_net_delta=amount - commission,
     ))
+    db.flush()
     return payment, True
 
 
@@ -138,4 +139,5 @@ def record_refund(db: Session, *, provider: str, external_payment_id: str,
         gross_delta=refund_amount, commission_delta=commission_reversal,
         provider_net_delta=provider_net_reversal,
     ))
+    db.flush()
     return payment, True
