@@ -76,15 +76,12 @@ void main() {
     await tester.drag(find.byType(ListView).first, const Offset(0, -250));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('Мэдэгдэл, чат'));
-    await tester.tap(find.text('Мэдэгдэл, чат'));
+    await tester.tap(find.ancestor(
+      of: find.text('Мэдэгдэл, чат'),
+      matching: find.byType(InkWell),
+    ).first);
     await tester.pump(const Duration(milliseconds: 800));
-    expect(
-      find.descendant(
-        of: find.byType(AppBar),
-        matching: find.text('Мэдэгдэл, чат'),
-      ),
-      findsOneWidget,
-    );
+    expect(find.byType(MessageCentrePage), findsOneWidget);
     expect(tester.takeException(), isNull);
 
     await tester.pageBack();
