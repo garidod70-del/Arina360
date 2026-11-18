@@ -1,8 +1,7 @@
 from fastapi import HTTPException
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.payment_models import CommissionLedger, PaymentTransaction
+from app.payment_models import CommissionLedger, PaymentAllocation, PaymentTransaction
 
 COMMISSION_RATE_BPS = 500
 
@@ -16,8 +15,8 @@ def commission_for(amount: int) -> int:
 
 def record_payment(
     db: Session, *, provider: str, external_payment_id: str, order_type: str,
-    order_id: str, category: str, buyer_user_id: int, provider_user_id: int,
-    amount: int,
+    order_id: str, category: str, buyer_user_id: int, provider_user_id: int | None,
+    amount: int, allocations: list[dict] | None = None,
 ) -> tuple[PaymentTransaction, bool]:
     if amount <= 0 or amount > 2_000_000_000:
         raise HTTPException(status_code=422, detail="Төлбөрийн дүн буруу байна.")
@@ -27,8 +26,7 @@ def record_payment(
     if existing:
         same = (
             existing.gross_amount == amount and existing.order_type == order_type
-            and existing.order_id == order_id and existing.provider_user_id == provider_user_id
-            and existing.buyer_user_id == buyer_user_id
+            and existing.order_id == order_id and existing.buyer_user_id == buyer_user_id
         )
         if not same:
             raise HTTPException(status_code=409, detail="Гүйлгээний ID өмнөх өөр мэдээлэлтэй давхцаж байна.")
@@ -45,6 +43,28 @@ def record_payment(
     )
     db.add(payment)
     db.flush()
+
+    normalized = allocations or ([{"provider_user_id": provider_user_id, "gross_amount": amount}] if provider_user_id else [])
+    normalized = [x for x in normalized if x.get("provider_user_id") and int(x.get("gross_amount", 0)) > 0]
+    if sum(int(x["gross_amount"]) for x in normalized) != amount:
+        raise HTTPException(status_code=422, detail="Үйлчилгээ үзүүлэгчийн орлогын хуваарилалт төлбөрийн дүнтэй таарахгүй байна.")
+
+    # Allocate the invoice-level commission exactly; last provider receives rounding remainder.
+    remaining_commission = commission
+    remaining_gross = amount
+    for index, allocation in enumerate(normalized):
+        gross = int(allocation["gross_amount"])
+        if index == len(normalized) - 1:
+            allocated_commission = remaining_commission
+        else:
+            allocated_commission = (commission * gross) // amount
+            remaining_commission -= allocated_commission
+            remaining_gross -= gross
+        db.add(PaymentAllocation(
+            payment_id=payment.id, provider_user_id=int(allocation["provider_user_id"]),
+            gross_amount=gross, commission_amount=allocated_commission,
+            provider_net_amount=gross - allocated_commission,
+        ))
     db.add(CommissionLedger(
         payment_id=payment.id, event_key=f"paid:{provider}:{external_payment_id}",
         event_type="paid", gross_delta=amount, commission_delta=commission,
@@ -66,16 +86,23 @@ def record_refund(db: Session, *, provider: str, external_payment_id: str,
     if refund_amount <= 0 or payment.refunded_amount + refund_amount > payment.gross_amount:
         raise HTTPException(status_code=422, detail="Буцаалтын дүн төлсөн дүнгээс хэтэрч болохгүй.")
 
-    old_refund = payment.refunded_amount
-    new_refund = old_refund + refund_amount
-    # Reverse the cumulative commission proportionally; this avoids rounding drift
-    # when one payment is refunded in several partial refunds.
-    target_reversed = (payment.commission_amount * new_refund) // payment.gross_amount
-    commission_reversal = target_reversed - payment.refunded_commission
-    provider_net_reversal = refund_amount - commission_reversal
-    payment.refunded_amount = new_refund
+    new_total_refund = payment.refunded_amount + refund_amount
+    allocations = db.query(PaymentAllocation).filter_by(payment_id=payment.id).order_by(PaymentAllocation.id).all()
+    commission_reversal = 0
+    provider_net_reversal = 0
+    for allocation in allocations:
+        target_refund = allocation.gross_amount if new_total_refund == payment.gross_amount else (allocation.gross_amount * new_total_refund) // payment.gross_amount
+        refund_delta = target_refund - allocation.refunded_amount
+        target_commission = (allocation.commission_amount * target_refund) // allocation.gross_amount
+        commission_delta = target_commission - allocation.refunded_commission
+        allocation.refunded_amount = target_refund
+        allocation.refunded_commission = target_commission
+        commission_reversal += commission_delta
+        provider_net_reversal += refund_delta - commission_delta
+
+    payment.refunded_amount = new_total_refund
     payment.refunded_commission += commission_reversal
-    payment.status = "refunded" if new_refund == payment.gross_amount else "partially_refunded"
+    payment.status = "refunded" if new_total_refund == payment.gross_amount else "partially_refunded"
     db.add(CommissionLedger(
         payment_id=payment.id, event_key=event_key, event_type="refund",
         gross_delta=refund_amount, commission_delta=commission_reversal,
