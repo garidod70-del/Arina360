@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
-from sqlalchemy import func, or_
+from sqlalchemy import case, func, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -494,9 +494,9 @@ def list_medals(tournament_id: int, db: Session = Depends(get_db)):
 @router.get("/leaderboards/medals")
 def medal_leaderboard(sport: str | None = None, db: Session = Depends(get_db)):
     query = db.query(TournamentParticipant.club_name,
-                     func.sum(func.case((MedalAward.medal == "gold", 1), else_=0)).label("gold"),
-                     func.sum(func.case((MedalAward.medal == "silver", 1), else_=0)).label("silver"),
-                     func.sum(func.case((MedalAward.medal == "bronze", 1), else_=0)).label("bronze"),
+                     func.sum(case((MedalAward.medal == "gold", 1), else_=0)).label("gold"),
+                     func.sum(case((MedalAward.medal == "silver", 1), else_=0)).label("silver"),
+                     func.sum(case((MedalAward.medal == "bronze", 1), else_=0)).label("bronze"),
                      func.sum(MedalAward.points).label("points")).join(
         MedalAward, MedalAward.participant_id == TournamentParticipant.id
     ).join(Tournament, Tournament.id == MedalAward.tournament_id)
