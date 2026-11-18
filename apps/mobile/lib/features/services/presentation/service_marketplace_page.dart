@@ -633,8 +633,8 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
               children: [
                 CircleAvatar(
                   radius: 24,
-                  backgroundColor: const Color(0xFFEAF1FF),
-                  child: Icon(widget.service.icon, color: const Color(0xFF2878FF)),
+                  backgroundColor: const Color(0xFFF0ECFF),
+                  child: Icon(widget.service.icon, color: const Color(0xFF7043EA)),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -669,7 +669,7 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
             const SizedBox(height: 10),
             Text(
               _formatPrice(provider['price_from']),
-              style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF245FC7)),
+              style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF3478FF)),
             ),
             const SizedBox(height: 12),
             SizedBox(
@@ -845,7 +845,7 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Color(0xFF101B36), Color(0xFF244B91)],
+                  colors: [Color(0xFF211052), Color(0xFF3157B8)],
                 ),
                 borderRadius: BorderRadius.circular(18),
               ),
@@ -888,12 +888,12 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
             if (_loading) const LinearProgressIndicator(),
             if (_error != null) ...[
               Card(
-                color: const Color(0xFFFFF3E8),
+                color: const Color(0xFFF3ECFF),
                 child: Padding(
                   padding: const EdgeInsets.all(14),
                   child: Text(
                     _error!,
-                    style: const TextStyle(color: Color(0xFF8A3B00)),
+                    style: const TextStyle(color: Color(0xFF6338D8)),
                   ),
                 ),
               ),
