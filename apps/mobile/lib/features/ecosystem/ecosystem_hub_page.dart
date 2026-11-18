@@ -21,7 +21,7 @@ class EcosystemHubPage extends StatelessWidget {
       if (isAdmin) _HubItem('Админ аналитик', Icons.analytics, const AnalyticsPage()),
     ];
     return Scaffold(
-      appBar: AppBar(title: const Text('ARINA 360 • Нэгдсэн систем')),
+      appBar: AppBar(title: const Text('ARENA 360 • Нэгдсэн систем')),
       body: ListView(padding: const EdgeInsets.all(16), children: [
         Container(
           padding: const EdgeInsets.all(20),
@@ -31,7 +31,7 @@ class EcosystemHubPage extends StatelessWidget {
             boxShadow: [BoxShadow(color: Color(0xFF603BDA).withValues(alpha: .22), blurRadius: 22, offset: Offset(0, 10))],
           ),
           child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('ARINA 360 • SPORT PLATFORM', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w800)),
+            Text('ARENA 360 • SPORT PLATFORM', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w800)),
             SizedBox(height: 8),
             Text('Спортын нэгдсэн удирдлага', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900)),
             SizedBox(height: 6),
