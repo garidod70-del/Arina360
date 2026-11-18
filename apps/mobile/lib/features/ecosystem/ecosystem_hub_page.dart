@@ -384,23 +384,43 @@ class StorePage extends StatefulWidget {
 }
 class _StorePageState extends _EcosystemState<StorePage> {
   List<Map<String, dynamic>> products = [];
+  List<Map<String, dynamic>> orders = [];
   Map<String, dynamic> cart = {};
   @override void initState() { super.initState(); refresh(); }
   Future<void> refresh() async => work((t) async {
-    products = await api.getList('/store/products', token: t); cart = await api.get('/store/cart', token: t); if (mounted) setState(() {});
+    products = await api.getList('/store/products', token: t);
+    cart = await api.get('/store/cart', token: t);
+    orders = await api.getList('/store/orders', token: t);
+    if (mounted) setState(() {});
   });
   Future<void> addProduct() async {
     final data = await form('Бараа нэмэх', const [
       _Input('title', 'Барааны нэр'), _Input('description', 'Тайлбар'),
-      _Input('category', 'Ангилал', options: ['Хувцас', 'Гутал', 'Бээлий, хамгаалалт', 'Бэлтгэлийн хэрэгсэл', 'Жин, сэргээх хэрэгсэл', 'Бусад']), _Input('price', 'Үнэ ₮', number: true), _Input('stock', 'Үлдэгдэл', number: true),
+      _Input('category', 'Ангилал', options: ['Хувцас', 'Гутал', 'Бээлий, хамгаалалт', 'Бэлтгэлийн хэрэгсэл', 'Жин, сэргээх хэрэгсэл', 'Бусад']),
+      _Input('price', 'Үнэ ₮', number: true), _Input('stock', 'Үлдэгдэл', number: true),
     ]);
     if (data == null) return;
     await work((t) async { await api.postAuthorized('/store/products', token: t, body: data); await refresh(); });
   }
   Future<void> addCart(int id) async => work((t) async {
     await api.postAuthorized('/store/cart', token: t, body: {'product_id': id, 'quantity': 1});
-    cart = await api.get('/store/cart', token: t); if (mounted) setState(() {}); toast('Сагсанд нэмэгдлээ.');
+    cart = await api.get('/store/cart', token: t);
+    if (mounted) setState(() {});
+    toast('Сагсанд нэмэгдлээ.');
   });
+  Future<void> payOrder(int id, {String? tokenValue}) async {
+    try {
+      final accessToken = tokenValue ?? await token();
+      await QPayPaymentDialog.open(
+        context: context, api: api, token: accessToken,
+        orderType: 'store_order', orderId: id,
+        onPaid: () => toast('Төлбөр баталгаажлаа. Дэлгүүрт захиалгын мэдэгдэл очлоо.'),
+      );
+      await refresh();
+    } catch (e) {
+      if (mounted) setState(() => error = e.toString());
+    }
+  }
   Future<void> checkout() async {
     final data = await form(
       'Хүргэлтийн хаяг',
@@ -410,75 +430,38 @@ class _StorePageState extends _EcosystemState<StorePage> {
     if (data == null) return;
     await work((t) async {
       final order = await api.postAuthorized('/store/checkout', token: t, body: data);
-      final invoice = await api.postAuthorized('/payments/qpay/invoice', token: t, body: {
-        'order_type': 'store_order',
-        'order_id': order['id'],
-      });
+      await payOrder(order['id'] as int, tokenValue: t);
       await refresh();
-      if (!mounted) return;
-      await showDialog<void>(
-        context: context,
-        builder: (dialogContext) => StatefulBuilder(
-          builder: (dialogContext, setDialog) => AlertDialog(
-            title: const Text('QPay төлбөр'),
-            content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
-              Text('Захиалга #${order['id']} • ${invoice['amount']} ₮'),
-              const SizedBox(height: 12),
-              if ((invoice['qr_text'] ?? '').toString().isNotEmpty)
-                QrImageView(data: invoice['qr_text'].toString(), size: 220),
-              if ((invoice['short_url'] ?? '').toString().isNotEmpty)
-                SelectableText(invoice['short_url'].toString()),
-              ...((invoice['bank_links'] as List? ?? []).whereType<Map>().map((bank) => ListTile(
-                dense: true,
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.account_balance),
-                title: Text((bank['name'] ?? bank['description'] ?? 'Банкны апп').toString()),
-                subtitle: SelectableText((bank['link'] ?? '').toString()),
-              ))),
-              const SizedBox(height: 8),
-              const Text('Банкны апп-аараа QR кодыг уншуулж төлнө үү.'),
-            ])),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('ХААХ')),
-              FilledButton(
-                onPressed: () async {
-                  try {
-                    final checked = await api.postAuthorized(
-                      '/payments/qpay/invoices/${invoice['id']}/check',
-                      token: t,
-                      body: const {},
-                    );
-                    if (checked['status'] == 'paid') {
-                      if (dialogContext.mounted) Navigator.pop(dialogContext);
-                      toast('Төлбөр баталгаажлаа. Дэлгүүрт мэдэгдэл илгээгдлээ.');
-                      await refresh();
-                    } else {
-                      toast('Төлбөр хараахан баталгаажаагүй байна.');
-                    }
-                  } catch (e) {
-                    toast(e.toString());
-                  }
-                },
-                child: const Text('ТӨЛБӨР ШАЛГАХ'),
-              ),
-            ],
-          ),
-        ),
-      );
     });
   }
+  String _orderStatus(Map<String, dynamic> order) {
+    if (order['payment_status'] == 'paid') return 'Төлбөр төлөгдсөн';
+    if (order['payment_status'] == 'free') return 'Үнэгүй захиалга';
+    return 'Төлбөр хүлээгдэж байна';
+  }
   @override Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Спорт барааны дэлгүүр'), actions: [IconButton(onPressed: refresh, icon: const Icon(Icons.refresh))]),
-    floatingActionButton: FloatingActionButton.extended(onPressed: addProduct, icon: const Icon(Icons.add), label: const Text('БАРАА НЭМЭХ')),
+    appBar: AppBar(title: const Text('Спорт барааны дэлгүүр'), actions: [IconButton(onPressed: busy ? null : refresh, icon: const Icon(Icons.refresh))]),
+    floatingActionButton: FloatingActionButton.extended(onPressed: busy ? null : addProduct, icon: const Icon(Icons.add), label: const Text('БАРАА НЭМЭХ')),
     body: ListView(padding: const EdgeInsets.all(16), children: [
       status(),
       Card(child: Padding(padding: const EdgeInsets.all(12), child: Column(children: [
-        Text('Сагсны дүн: ' + (cart['total_amount'] ?? 0).toString() + ' ₮'),
-        FilledButton(onPressed: (cart['items'] as List? ?? []).isEmpty ? null : checkout, child: const Text('ЗАХИАЛГА ҮҮСГЭХ')),
+        Text('Сагсны дүн: ${cart['total_amount'] ?? 0} ₮'),
+        FilledButton(onPressed: busy || (cart['items'] as List? ?? []).isEmpty ? null : checkout, child: const Text('ЗАХИАЛГА ҮҮСГЭХ')),
       ]))),
+      const Text('МИНИЙ ЗАХИАЛГУУД', style: TextStyle(fontWeight: FontWeight.w900)),
+      ...orders.map((order) => Card(child: ListTile(
+        title: Text('Захиалга #${order['id']} • ${order['total_amount']} ₮'),
+        subtitle: Text('${_orderStatus(order)} • ${order['status']}'),
+        trailing: order['payment_status'] == 'unpaid' && order['status'] == 'pending_payment'
+            ? TextButton(onPressed: busy ? null : () => payOrder(order['id'] as int), child: const Text('ТӨЛӨХ'))
+            : const Icon(Icons.check_circle_outline),
+      ))),
+      const SizedBox(height: 8),
+      const Text('БАРААНУУД', style: TextStyle(fontWeight: FontWeight.w900)),
       ...products.map((x) => Card(child: ListTile(
-        title: Text(x['title'].toString()), subtitle: Text(x['category'].toString() + ' • Үлдэгдэл ' + x['stock'].toString()),
-        trailing: TextButton(onPressed: () => addCart(x['id'] as int), child: Text(x['price'].toString() + ' ₮ +')),
+        title: Text(x['title'].toString()),
+        subtitle: Text(x['category'].toString() + ' • Үлдэгдэл ' + x['stock'].toString()),
+        trailing: TextButton(onPressed: busy ? null : () => addCart(x['id'] as int), child: Text(x['price'].toString() + ' ₮ +')),
       ))),
     ]),
   );
