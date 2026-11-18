@@ -333,6 +333,8 @@ class _MessageCentrePageState extends _EcosystemState<MessageCentrePage> {
       ...chats.map((x) => Card(child: ListTile(
         leading: const Icon(Icons.person), title: Text('Хэрэглэгч #' + x['other_user_id'].toString()),
         subtitle: Text(x['last_message']?.toString() ?? 'Шинэ харилцан яриа'),
+        onTap: () => Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) => ChatThreadPage(conversationId: x['id'] as int))),
       ))),
     ]),
   );
@@ -351,6 +353,49 @@ class _AnalyticsPageState extends _EcosystemState<AnalyticsPage> {
     body: ListView(padding: const EdgeInsets.all(16), children: [
       status(),
       ...stats.entries.map((x) => Card(child: ListTile(title: Text(x.key), trailing: Text(x.value.toString(), style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18))))),
+    ]),
+  );
+}
+
+
+class ChatThreadPage extends StatefulWidget {
+  final int conversationId;
+  const ChatThreadPage({super.key, required this.conversationId});
+  @override State<ChatThreadPage> createState() => _ChatThreadPageState();
+}
+
+class _ChatThreadPageState extends _EcosystemState<ChatThreadPage> {
+  final controller = TextEditingController();
+  List<Map<String, dynamic>> messages = [];
+  @override void initState() { super.initState(); refresh(); }
+  @override void dispose() { controller.dispose(); super.dispose(); }
+  Future<void> refresh() async => work((t) async {
+    messages = await api.getList('/chat/conversations/' + widget.conversationId.toString() + '/messages', token: t);
+    if (mounted) setState(() {});
+  });
+  Future<void> send() async {
+    final body = controller.text.trim();
+    if (body.isEmpty) return;
+    await work((t) async {
+      await api.postAuthorized('/chat/conversations/' + widget.conversationId.toString() + '/messages',
+        token: t, body: {'body': body});
+      controller.clear();
+      messages = await api.getList('/chat/conversations/' + widget.conversationId.toString() + '/messages', token: t);
+      if (mounted) setState(() {});
+    });
+  }
+  @override Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Харилцан яриа'), actions: [IconButton(onPressed: refresh, icon: const Icon(Icons.refresh))]),
+    body: Column(children: [
+      status(),
+      Expanded(child: ListView(padding: const EdgeInsets.all(12), children: messages.map((x) => Align(
+        alignment: Alignment.centerLeft,
+        child: Card(child: Padding(padding: const EdgeInsets.all(12), child: Text(x['body'].toString()))),
+      )).toList())),
+      SafeArea(child: Padding(padding: const EdgeInsets.all(10), child: Row(children: [
+        Expanded(child: TextField(controller: controller, decoration: const InputDecoration(hintText: 'Зурвас бичих'))),
+        IconButton(onPressed: busy ? null : send, icon: const Icon(Icons.send)),
+      ]))),
     ]),
   );
 }
