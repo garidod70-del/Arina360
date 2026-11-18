@@ -82,6 +82,7 @@ class ServiceRequestResponse(BaseModel):
     preferred_at: datetime | None
     contact_phone: str
     status: str
+    payment_status: str = "unpaid"
     response_note: str | None
     created_at: datetime
     updated_at: datetime
