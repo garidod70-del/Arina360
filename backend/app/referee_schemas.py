@@ -71,7 +71,7 @@ class RefereeBookingOutput(BaseModel):
     food_fee: int
     total_amount: int
     contact_name: str
-    contact_phone: str
+    contact_phone: str | None
     notes: str | None
     status: str
     payment_status: str = "unpaid"
