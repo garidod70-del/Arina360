@@ -19,6 +19,7 @@ import 'features/services/presentation/venue_booking_page.dart';
 import 'features/referees/referee_booking_page.dart';
 import 'features/admin/admin_referee_page.dart';
 import 'features/admin/admin_service_providers_page.dart';
+import 'features/competitions/presentation/competitions_page.dart';
 
 final ValueNotifier<ThemeMode> arenaThemeMode = ValueNotifier(ThemeMode.dark);
 
@@ -430,7 +431,44 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
           ),
-          const SizedBox(height: 22),
+          const SizedBox(height: 18),
+          Card(
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const CompetitionsPage()),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(18),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.14),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Icon(Icons.emoji_events, color: Theme.of(context).colorScheme.primary, size: 30),
+                    ),
+                    const SizedBox(width: 14),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('СПОРТЫН ТЭМЦЭЭН', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+                          SizedBox(height: 4),
+                          Text('Тэмцээн үүсгэх • Бүртгэл • Сугалаа • Оноо', style: TextStyle(fontSize: 12, color: Colors.blueGrey)),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.arrow_forward_ios, size: 16),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 18),
           const Text(
             'ҮЙЛЧИЛГЭЭНҮҮД',
             style: TextStyle(
