@@ -14,8 +14,8 @@ jobs:
           java-version: '17'
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.5'
           channel: stable
+          cache: true
       - name: Load signing configuration
         env:
           ARENA_SIGNING_CONFIG: ${{ secrets.ARENA_SIGNING_CONFIG }}
@@ -59,10 +59,25 @@ jobs:
               env.write(f"KEY_ALIAS={values['ARENA_KEY_ALIAS']}\\n")
               env.write(f"KEY_PASSWORD={values['ARENA_KEY_PASSWORD']}\\n")
           PY
+      - name: Validate production API endpoint
+        env:
+          ARENA_API_BASE_URL: ${{ secrets.ARENA_API_BASE_URL }}
+        run: |
+          python3 - <<'PY'
+          import os
+          from urllib.parse import urlsplit
+          value = os.environ.get("ARENA_API_BASE_URL", "").strip().rstrip("/")
+          parsed = urlsplit(value)
+          if parsed.scheme != "https" or not parsed.hostname or parsed.path or parsed.query or parsed.fragment:
+              raise SystemExit("Set ARENA_API_BASE_URL to the public HTTPS API origin in repository Actions secrets.")
+          with open(os.environ["GITHUB_ENV"], "a") as env:
+              env.write(f"ARENA_API_BASE_URL={value}\\n")
+          PY
       - name: Generate Android project and configure signing
         working-directory: apps/mobile
         run: |
           flutter create --platforms=android --project-name arena360 --org mn.arena360 .
+          grep -q 'android.permission.INTERNET' android/app/src/main/AndroidManifest.xml || sed -i '/<application/i\\    <uses-permission android:name="android.permission.INTERNET" />' android/app/src/main/AndroidManifest.xml
           echo "$KEYSTORE_BASE64" | base64 --decode > android/app/arena-upload-key.jks
           cat > android/key.properties <<EOF
           storePassword=$KEYSTORE_PASSWORD
@@ -101,7 +116,7 @@ jobs:
           PY
           flutter clean
           flutter pub get
-          flutter build apk --release --target-platform android-arm64
+          flutter build apk --release --target-platform android-arm64 --dart-define=ARENA_API_BASE_URL="$ARENA_API_BASE_URL"
       - name: Verify signed APK
         working-directory: apps/mobile
         run: |
