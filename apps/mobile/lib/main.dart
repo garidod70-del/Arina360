@@ -31,43 +31,140 @@ Future<void> main() async {
   runApp(const Arena360App());
 }
 
-const navy = Color(0xFF101B36);
-const blue = Color(0xFF2878FF);
-const pageBg = Color(0xFFF4F7FC);
+const navy = Color(0xFF080D2B);
+const blue = Color(0xFF3478FF);
+const violet = Color(0xFF7C35F5);
+const pageBg = Color(0xFFF4F2FF);
 
 class Arena360App extends StatelessWidget {
   const Arena360App({super.key});
 
   @override
   Widget build(BuildContext context) {
+    const lightScheme = ColorScheme(
+      brightness: Brightness.light, primary: Color(0xFF6338D8),
+      onPrimary: Colors.white, secondary: Color(0xFF287BFA),
+      onSecondary: Colors.white, error: Color(0xFFBA1A1A),
+      onError: Colors.white, surface: Color(0xFFFFFFFF),
+      onSurface: Color(0xFF17152A),
+    );
+    const darkScheme = ColorScheme(
+      brightness: Brightness.dark, primary: Color(0xFF9A75FF),
+      onPrimary: Color(0xFF160A38), secondary: Color(0xFF63A5FF),
+      onSecondary: Color(0xFF061B3B), error: Color(0xFFFF6B78),
+      onError: Color(0xFF410006), surface: Color(0xFF111735),
+      onSurface: Color(0xFFF5F3FF),
+    );
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: arenaThemeMode,
       builder: (context, mode, _) => MaterialApp(
-        title: 'ARENA 360',
+        title: 'ARINA 360',
         debugShowCheckedModeBanner: false,
         themeMode: mode,
         theme: ThemeData(
           useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(seedColor: blue, brightness: Brightness.light),
-          scaffoldBackgroundColor: const Color(0xFFF3F7FD),
-          cardColor: Colors.white,
-          appBarTheme: const AppBarTheme(backgroundColor: navy, foregroundColor: Colors.white, centerTitle: false, elevation: 0),
-          inputDecorationTheme: InputDecorationTheme(filled: true, fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)), enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFDCE6F4)))),
-          cardTheme: CardThemeData(color: Colors.white, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: const BorderSide(color: Color(0xFFE1EAF6)))),
+          colorScheme: lightScheme,
+          scaffoldBackgroundColor: const Color(0xFFF5F4FC),
+          appBarTheme: const AppBarTheme(
+            backgroundColor: Color(0xFF17133D), foregroundColor: Colors.white,
+            centerTitle: false, elevation: 0,
+          ),
+          inputDecorationTheme: InputDecorationTheme(
+            filled: true, fillColor: Colors.white,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFE2DDF5))),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF7045E8), width: 1.6)),
+          ),
+          cardTheme: CardThemeData(
+            color: Colors.white, elevation: 0,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: const BorderSide(color: Color(0xFFE6E1F5))),
+          ),
+          filledButtonTheme: FilledButtonThemeData(
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF6638E5), foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            ),
+          ),
         ),
         darkTheme: ThemeData(
-          useMaterial3: true,
-          brightness: Brightness.dark,
-          colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF3D8BFF), brightness: Brightness.dark).copyWith(primary: const Color(0xFF4B95FF), secondary: const Color(0xFF65B8FF), surface: const Color(0xFF10213B)),
-          scaffoldBackgroundColor: const Color(0xFF081426),
-          cardColor: const Color(0xFF10213B),
-          appBarTheme: const AppBarTheme(backgroundColor: Color(0xFF081426), foregroundColor: Colors.white, centerTitle: false, elevation: 0),
-          inputDecorationTheme: InputDecorationTheme(filled: true, fillColor: const Color(0xFF142945), labelStyle: const TextStyle(color: Color(0xFFB7C9E2)), border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)), enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF294362)))),
-          cardTheme: CardThemeData(color: const Color(0xFF10213B), elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: const BorderSide(color: Color(0xFF233B5A)))),
-          dividerColor: const Color(0xFF294362),
+          useMaterial3: true, brightness: Brightness.dark, colorScheme: darkScheme,
+          scaffoldBackgroundColor: const Color(0xFF080D24),
+          appBarTheme: const AppBarTheme(
+            backgroundColor: Color(0xFF0B1030), foregroundColor: Colors.white,
+            centerTitle: false, elevation: 0,
+          ),
+          inputDecorationTheme: InputDecorationTheme(
+            filled: true, fillColor: const Color(0xFF171D40),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            labelStyle: const TextStyle(color: Color(0xFFB8B7D8)),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF30345F))),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF916BFF), width: 1.6)),
+          ),
+          cardTheme: CardThemeData(
+            color: const Color(0xFF111735), elevation: 0,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: const BorderSide(color: Color(0xFF292F5D))),
+          ),
+          filledButtonTheme: FilledButtonThemeData(
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF7043EA), foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            ),
+          ),
+          dividerColor: const Color(0xFF30345F),
         ),
         home: const AuthPage(),
       ),
+    );
+  }
+}
+
+class _ArinaBrandLockup extends StatelessWidget {
+  const _ArinaBrandLockup();
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          width: 104, height: 104,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(30),
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft, end: Alignment.bottomRight,
+              colors: [Color(0xFF9A35FF), Color(0xFF365BFF), Color(0xFF16B9FF)],
+            ),
+            boxShadow: [BoxShadow(color: const Color(0xFF7546FF).withValues(alpha: .32), blurRadius: 28, spreadRadius: 2)],
+          ),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              const Icon(Icons.sports_martial_arts_rounded, color: Colors.white, size: 58),
+              Positioned(right: 11, top: 10, child: Container(
+                width: 15, height: 15,
+                decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withValues(alpha: .95)),
+              )),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        RichText(text: const TextSpan(
+          style: TextStyle(fontSize: 31, fontWeight: FontWeight.w900, letterSpacing: 1.6),
+          children: [
+            TextSpan(text: 'ARINA ', style: TextStyle(color: Color(0xFF8C63F6))),
+            TextSpan(text: '360', style: TextStyle(color: Color(0xFF3297FF))),
+          ],
+        )),
+        Text('SPORT • CONNECT • GROW', style: TextStyle(
+          color: dark ? const Color(0xFFB9B7E2) : const Color(0xFF77738F),
+          fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 2.0,
+        )),
+      ],
     );
   }
 }
@@ -169,34 +266,8 @@ class _AuthPageState extends State<AuthPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Container(
-                      height: 76,
-                      width: 76,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: navy,
-                        borderRadius: BorderRadius.circular(22),
-                      ),
-                      child: const Icon(
-                        Icons.sports_martial_arts,
-                        color: Colors.white,
-                        size: 42,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    const Text(
-                      'ARENA 360',
-                      style: TextStyle(
-                        fontSize: 30,
-                        fontWeight: FontWeight.w900,
-                        color: navy,
-                        letterSpacing: 1.4,
-                      ),
-                    ),
-                    const Text(
-                      'ONE PLATFORM. ALL SPORTS.',
-                      style: TextStyle(color: blue, fontWeight: FontWeight.bold),
-                    ),
+                    const _ArinaBrandLockup(),
+                    const SizedBox(height: 28),
                     const SizedBox(height: 32),
                     Text(
                       _isRegister ? 'Шинэ хэрэглэгч бүртгүүлэх' : 'Нэвтрэх',
@@ -314,7 +385,7 @@ class _HomePageState extends State<HomePage> {
       showDialog<void>(
         context: context,
         builder: (dialogContext) => AlertDialog(
-          title: const Text('ARENA 360 шинэчлэлт'),
+          title: const Text('ARINA 360 шинэчлэлт'),
           content: Text('Шинэ хувилбар ${data['version']} бэлэн байна. Одоо шинэчлэх үү?'),
           actions: [
             TextButton(
@@ -342,7 +413,7 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('ARENA 360'),
+        title: const Text('ARINA 360'),
         actions: [
           IconButton(
             tooltip: arenaThemeMode.value == ThemeMode.dark ? 'Цайвар загвар руу шилжих' : 'Бараан загвар руу шилжих',
@@ -1134,7 +1205,7 @@ class _AppUpdatePageState extends State<AppUpdatePage> {
   Widget build(BuildContext context) {
     final hasUpdate = latestBuild != null && latestVersion != null && latestBuild! > 0 && apkUrl != null;
     return Scaffold(
-      appBar: AppBar(title: const Text('ARENA 360 шинэчлэлт')),
+      appBar: AppBar(title: const Text('ARINA 360 шинэчлэлт')),
       body: ListView(padding: const EdgeInsets.all(20), children: [
         Container(
           padding: const EdgeInsets.all(20),
