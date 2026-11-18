@@ -43,7 +43,7 @@ class EcosystemHubPage extends StatelessWidget {
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           itemCount: items.length,
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 12, mainAxisSpacing: 12, childAspectRatio: 1.15),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 12, mainAxisSpacing: 12, mainAxisExtent: 152),
           itemBuilder: (context, index) {
             final item = items[index];
             return Card(clipBehavior: Clip.antiAlias, child: InkWell(
@@ -58,7 +58,7 @@ class EcosystemHubPage extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Container(width: 54, height: 54, decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFF873BEE), Color(0xFF268CFF)]), borderRadius: BorderRadius.circular(16)), child: Icon(item.icon, size: 30, color: Colors.white)),
+                  Container(width: 48, height: 48, decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFF873BEE), Color(0xFF268CFF)]), borderRadius: BorderRadius.circular(16)), child: Icon(item.icon, size: 26, color: Colors.white)),
                   Text(item.title, style: const TextStyle(fontWeight: FontWeight.w900)),
                   Align(alignment: Alignment.centerRight, child: Icon(Icons.arrow_forward_rounded, color: Theme.of(context).colorScheme.secondary)),
                 ],
