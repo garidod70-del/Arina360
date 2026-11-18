@@ -525,3 +525,86 @@ def admin_analytics(user: User = Depends(get_current_user), db: Session = Depend
         "unread_notifications": db.query(Notification).filter(Notification.read_at.is_(None)).count(),
         "messages": db.query(ChatMessage).count(),
     }
+
+
+class VerificationInput(BaseModel):
+    approved: bool
+    note: str | None = Field(default=None, max_length=1000)
+
+
+class OrderStatusInput(BaseModel):
+    status: str = Field(pattern="^(confirmed|shipped|delivered|cancelled)$")
+
+
+@router.post("/admin/clubs/{club_id}/verify")
+def verify_club(club_id: int, payload: VerificationInput,
+                user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if not _admin(user):
+        raise HTTPException(status_code=403, detail="Админ эрх шаардлагатай.")
+    club = _club_or_404(db, club_id)
+    club.verification_status = "verified" if payload.approved else "rejected"
+    if payload.approved:
+        _notify(db, club.owner_id, "Клуб баталгаажлаа", f"{club.name} клуб баталгаажсан.", "club")
+    db.commit()
+    return {"id": club.id, "verification_status": club.verification_status}
+
+
+@router.post("/admin/coaches/{user_id}/verify")
+def verify_coach(user_id: int, payload: VerificationInput,
+                 user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if not _admin(user):
+        raise HTTPException(status_code=403, detail="Админ эрх шаардлагатай.")
+    coach = db.query(CoachProfile).filter_by(user_id=user_id).first()
+    if coach is None:
+        raise HTTPException(status_code=404, detail="Дасгалжуулагчийн профайл олдсонгүй.")
+    coach.verification_status = "verified" if payload.approved else "rejected"
+    if payload.approved:
+        _notify(db, coach.user_id, "Дасгалжуулагчийн эрх баталгаажлаа", "Таны мэргэжлийн мэдээлэл баталгаажлаа.", "coach")
+    db.commit()
+    return {"user_id": coach.user_id, "verification_status": coach.verification_status}
+
+
+@router.get("/store/seller/orders")
+def seller_orders(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    order_ids = db.query(ShopOrderItem.order_id).join(
+        Product, Product.id == ShopOrderItem.product_id
+    ).filter(Product.seller_id == user.id).distinct().subquery()
+    rows = db.query(ShopOrder).filter(ShopOrder.id.in_(order_ids)).order_by(ShopOrder.created_at.desc()).limit(200).all()
+    result = []
+    for order in rows:
+        items = db.query(ShopOrderItem).join(Product, Product.id == ShopOrderItem.product_id).filter(
+            ShopOrderItem.order_id == order.id, Product.seller_id == user.id
+        ).all()
+        result.append({"id": order.id, "total_amount": sum(x.unit_price * x.quantity for x in items),
+                       "status": order.status, "items": [{"title": x.product_title, "quantity": x.quantity} for x in items],
+                       "created_at": order.created_at})
+    return result
+
+
+@router.post("/store/orders/{order_id}/status")
+def update_seller_order_status(order_id: int, payload: OrderStatusInput,
+                               user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    order = db.get(ShopOrder, order_id)
+    if order is None:
+        raise HTTPException(status_code=404, detail="Захиалга олдсонгүй.")
+    items = db.query(ShopOrderItem).filter_by(order_id=order.id).all()
+    products = [db.get(Product, x.product_id) for x in items if x.product_id is not None]
+    if not products or any(product is None or product.seller_id != user.id for product in products):
+        raise HTTPException(status_code=403, detail="Энэ захиалгын бүх бараа таны дэлгүүрт хамаарахгүй.")
+    transitions = {
+        "pending_payment": {"confirmed", "cancelled"},
+        "confirmed": {"shipped", "cancelled"},
+        "shipped": {"delivered"},
+    }
+    if payload.status not in transitions.get(order.status, set()):
+        raise HTTPException(status_code=409, detail="Захиалгын төлөвийн шилжилт зөвшөөрөгдөхгүй.")
+    if payload.status == "cancelled":
+        for line in items:
+            if line.product_id is not None:
+                product = db.get(Product, line.product_id)
+                if product is not None:
+                    product.stock += line.quantity
+    order.status = payload.status
+    _notify(db, order.user_id, "Захиалгын төлөв шинэчлэгдлээ", f"Захиалга #{order.id}: {payload.status}", "order")
+    db.commit()
+    return {"id": order.id, "status": order.status}
