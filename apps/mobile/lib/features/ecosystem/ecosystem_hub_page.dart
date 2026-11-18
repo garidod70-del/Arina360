@@ -19,16 +19,17 @@ class EcosystemHubPage extends StatelessWidget {
       if (isAdmin) _HubItem('Админ аналитик', Icons.analytics, const AnalyticsPage()),
     ];
     return Scaffold(
-      appBar: AppBar(title: const Text('ARENA 360 • Нэгдсэн систем')),
+      appBar: AppBar(title: const Text('ARINA 360 • Нэгдсэн систем')),
       body: ListView(padding: const EdgeInsets.all(16), children: [
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            gradient: const LinearGradient(colors: [Color(0xFF101B36), Color(0xFF2456A5)]),
-            borderRadius: BorderRadius.circular(20),
+            gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF211052), Color(0xFF4330A8), Color(0xFF1267C9)]),
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [BoxShadow(color: Color(0xFF603BDA).withValues(alpha: .22), blurRadius: 22, offset: Offset(0, 10))],
           ),
           child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('ONE PLATFORM. ALL SPORTS.', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w800)),
+            Text('ARINA 360 • SPORT PLATFORM', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w800)),
             SizedBox(height: 8),
             Text('Спортын нэгдсэн удирдлага', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900)),
             SizedBox(height: 6),
@@ -43,18 +44,24 @@ class EcosystemHubPage extends StatelessWidget {
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 12, mainAxisSpacing: 12, childAspectRatio: 1.15),
           itemBuilder: (context, index) {
             final item = items[index];
-            return Card(child: InkWell(
+            return Card(clipBehavior: Clip.antiAlias, child: InkWell(
               borderRadius: BorderRadius.circular(18),
               onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => item.page)),
-              child: Padding(padding: const EdgeInsets.all(16), child: Column(
+              child: Ink(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Theme.of(context).colorScheme.surface, Theme.of(context).colorScheme.primary.withValues(alpha: .09)]),
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: Padding(padding: const EdgeInsets.all(16), child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Icon(item.icon, size: 34, color: Theme.of(context).colorScheme.primary),
+                  Container(width: 54, height: 54, decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFF873BEE), Color(0xFF268CFF)]), borderRadius: BorderRadius.circular(16)), child: Icon(item.icon, size: 30, color: Colors.white)),
                   Text(item.title, style: const TextStyle(fontWeight: FontWeight.w900)),
-                  const Align(alignment: Alignment.centerRight, child: Icon(Icons.arrow_forward)),
+                  Align(alignment: Alignment.centerRight, child: Icon(Icons.arrow_forward_rounded, color: Theme.of(context).colorScheme.secondary)),
                 ],
               )),
+              ),
             ));
           },
         ),
