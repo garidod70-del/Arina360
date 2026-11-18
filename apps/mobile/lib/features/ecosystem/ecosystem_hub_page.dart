@@ -430,7 +430,11 @@ class _StorePageState extends _EcosystemState<StorePage> {
     if (data == null) return;
     await work((t) async {
       final order = await api.postAuthorized('/store/checkout', token: t, body: data);
-      await payOrder(order['id'] as int, tokenValue: t, refreshAfter: false);
+      if (order['payment_status'] == 'free') {
+        toast('Үнэгүй захиалга бүртгэгдлээ. Дэлгүүрт мэдэгдэл очлоо.');
+      } else {
+        await payOrder(order['id'] as int, tokenValue: t, refreshAfter: false);
+      }
       products = await api.getList('/store/products', token: t);
       cart = await api.get('/store/cart', token: t);
       orders = await api.getList('/store/orders', token: t);
