@@ -46,7 +46,7 @@ class CommissionLedger(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     payment_id: Mapped[int] = mapped_column(ForeignKey("payment_transactions.id", ondelete="RESTRICT"), nullable=False, index=True)
-    event_key: Mapped[str] = mapped_column(String(200), nullable=False)
+    event_key: Mapped[str] = mapped_column(String(255), nullable=False)
     event_type: Mapped[str] = mapped_column(String(20), nullable=False)
     gross_delta: Mapped[int] = mapped_column(Integer, nullable=False)
     commission_delta: Mapped[int] = mapped_column(Integer, nullable=False)
