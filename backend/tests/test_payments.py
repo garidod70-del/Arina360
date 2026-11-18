@@ -288,3 +288,79 @@ def test_multi_seller_store_payment_splits_commission_once_and_notifies_once(mon
             assert len(order_notifications) == 1
             assert buyer_phone in order_notifications[0]["body"]
 
+
+def test_pending_qpay_store_payment_does_not_notify_seller_or_create_commission(monkeypatch):
+    from types import SimpleNamespace
+    from fastapi.testclient import TestClient
+    from app.main import app
+    from app.routers import payments as payment_router
+    from app.ecosystem_models import ShopOrder
+
+    def register(client, phone):
+        response = client.post("/api/v1/auth/register", json={
+            "phone": phone, "password": "secure-test-password",
+        })
+        assert response.status_code == 201, response.text
+        return {"Authorization": f"Bearer {response.json()['access_token']}"}
+
+    with TestClient(app) as client:
+        suffix = str(uuid.uuid4().int % 100000000).zfill(8)
+        buyer_headers = register(client, f"+97674{suffix}")
+        seller_headers = register(client, f"+97673{suffix}")
+        product = client.post("/api/v1/store/products", headers=seller_headers, json={
+            "title": "Төлбөр хүлээгдэж буй бараа", "description": "Pending payment test",
+            "category": "training", "price": 25_000, "stock": 2,
+        })
+        assert product.status_code == 201, product.text
+        cart = client.post("/api/v1/store/cart", headers=buyer_headers, json={
+            "product_id": product.json()["id"], "quantity": 1,
+        })
+        assert cart.status_code == 200, cart.text
+        order = client.post("/api/v1/store/checkout", headers=buyer_headers, json={
+            "delivery_address": "Улаанбаатар хот, pending төлбөрийн тест",
+        })
+        assert order.status_code == 201, order.text
+
+        monkeypatch.setattr(payment_router, "get_settings", lambda: SimpleNamespace(
+            qpay_callback_url="https://api.example.test",
+        ))
+        invoice_id = "qpay-pending-" + uuid.uuid4().hex
+        monkeypatch.setattr(payment_router, "create_invoice", lambda **kwargs: {
+            "invoice_id": invoice_id, "qr_text": "qpay-pending-qr",
+            "qr_image": "", "qPay_shortUrl": "https://qpay.mn/test", "urls": [],
+        })
+        invoice = client.post("/api/v1/payments/qpay/invoice", headers=buyer_headers, json={
+            "order_type": "store_order", "order_id": order.json()["id"],
+        })
+        assert invoice.status_code == 201, invoice.text
+
+        monkeypatch.setattr(payment_router, "check_invoice", lambda _invoice_id: {
+            "paid_amount": "0.00",
+            "rows": [{
+                "payment_id": "pending-" + uuid.uuid4().hex,
+                "payment_status": "WAITING",
+                "payment_amount": "25000.00",
+                "payment_currency": "MNT",
+            }],
+        })
+        checked = client.post(
+            f"/api/v1/payments/qpay/invoices/{invoice.json()['id']}/check",
+            headers=buyer_headers, json={},
+        )
+        assert checked.status_code == 200, checked.text
+        assert checked.json()["status"] == "pending"
+
+        with SessionLocal() as db:
+            stored_order = db.get(ShopOrder, order.json()["id"])
+            assert stored_order.payment_status == "unpaid"
+            assert db.query(PaymentTransaction).filter_by(
+                provider="qpay", external_payment_id=invoice_id,
+            ).count() == 0
+
+        notifications = client.get("/api/v1/notifications", headers=seller_headers)
+        assert notifications.status_code == 200
+        assert not any(
+            item["category"] == "order" and str(order.json()["id"]) in item["body"]
+            for item in notifications.json()
+        )
+
