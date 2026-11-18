@@ -74,6 +74,7 @@ class RefereeBookingOutput(BaseModel):
     contact_phone: str
     notes: str | None
     status: str
+    payment_status: str = "unpaid"
     created_at: datetime
 
 
