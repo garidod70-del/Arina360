@@ -483,10 +483,30 @@ def provider_commission_summary(
     db: Session = Depends(get_db),
 ):
     rows = db.query(PaymentAllocation).filter(PaymentAllocation.provider_user_id == user.id).all()
+    recent = (
+        db.query(PaymentAllocation, PaymentTransaction)
+        .join(PaymentTransaction, PaymentTransaction.id == PaymentAllocation.payment_id)
+        .filter(PaymentAllocation.provider_user_id == user.id)
+        .order_by(PaymentTransaction.paid_at.desc())
+        .limit(100)
+        .all()
+    )
     return {
         "gross_paid_mnt": sum(p.gross_amount for p in rows),
         "commission_deducted_mnt": sum(p.commission_amount - p.refunded_commission for p in rows),
         "refunds_mnt": sum(p.refunded_amount for p in rows),
         "net_after_commission_and_refunds_mnt": sum(p.provider_net_amount - (p.refunded_amount - p.refunded_commission) for p in rows),
         "transactions": len(rows),
+        "recent_transactions": [{
+            "payment_id": payment.id,
+            "category": payment.category,
+            "order_type": payment.order_type,
+            "order_id": payment.order_id,
+            "gross_mnt": allocation.gross_amount,
+            "commission_mnt": allocation.commission_amount - allocation.refunded_commission,
+            "refund_mnt": allocation.refunded_amount,
+            "net_mnt": allocation.provider_net_amount - (allocation.refunded_amount - allocation.refunded_commission),
+            "paid_at": payment.paid_at,
+            "status": payment.status,
+        } for allocation, payment in recent],
     }
