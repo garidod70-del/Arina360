@@ -12,8 +12,8 @@ class Settings(BaseSettings):
     admin_bootstrap_key: str = ""
     payment_webhook_secret: str = ""
     qpay_base_url: str = "https://merchant-sandbox.qpay.mn"
-    qpay_username: str = ""
-    qpay_password: str = ""
+    qpay_client_id: str = ""
+    qpay_client_secret: str = ""
     qpay_invoice_code: str = ""
     qpay_callback_url: str = ""
 
