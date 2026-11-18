@@ -110,14 +110,15 @@ def record_refund(db: Session, *, provider: str, external_payment_id: str,
     ) // payment.gross_amount
     commission_targets = []
     commission_allocated = 0
-    for index, allocation in enumerate(allocations):
-        target = allocation.commission_amount if index == len(allocations) - 1 else (
-            target_total_commission * allocation.commission_amount // max(payment.commission_amount, 1)
+    for allocation in allocations:
+        target = allocation.commission_amount if new_total_refund == payment.gross_amount else (
+            allocation.commission_amount * new_total_refund // payment.gross_amount
         )
         commission_targets.append(target)
         commission_allocated += target
-    if commission_targets:
-        commission_targets[-1] += target_total_commission - commission_allocated
+    commission_remainder = target_total_commission - commission_allocated
+    if commission_targets and commission_remainder:
+        commission_targets[-1] += commission_remainder
 
     commission_reversal = 0
     provider_net_reversal = 0
