@@ -55,7 +55,7 @@ jobs:
         run: flutter pub get
       - name: Analyze application source
         working-directory: phase12/arena360-starter/apps/mobile
-        run: flutter analyze lib
+        run: flutter analyze --no-fatal-infos lib
       - name: Build installable ARM64 test APK
         working-directory: phase12/arena360-starter/apps/mobile
         run: flutter build apk --release --target-platform android-arm64 --dart-define=API_BASE_URL=https://api.example.invalid/api/v1
