@@ -408,7 +408,7 @@ class _StorePageState extends _EcosystemState<StorePage> {
     if (mounted) setState(() {});
     toast('Сагсанд нэмэгдлээ.');
   });
-  Future<void> payOrder(int id, {String? tokenValue}) async {
+  Future<void> payOrder(int id, {String? tokenValue, bool refreshAfter = true}) async {
     try {
       final accessToken = tokenValue ?? await token();
       await QPayPaymentDialog.open(
@@ -416,7 +416,7 @@ class _StorePageState extends _EcosystemState<StorePage> {
         orderType: 'store_order', orderId: id,
         onPaid: () => toast('Төлбөр баталгаажлаа. Дэлгүүрт захиалгын мэдэгдэл очлоо.'),
       );
-      await refresh();
+      if (refreshAfter) await refresh();
     } catch (e) {
       if (mounted) setState(() => error = e.toString());
     }
@@ -430,7 +430,7 @@ class _StorePageState extends _EcosystemState<StorePage> {
     if (data == null) return;
     await work((t) async {
       final order = await api.postAuthorized('/store/checkout', token: t, body: data);
-      await payOrder(order['id'] as int, tokenValue: t);
+      await payOrder(order['id'] as int, tokenValue: t, refreshAfter: false);
       await refresh();
     });
   }
