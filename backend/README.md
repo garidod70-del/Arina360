@@ -50,10 +50,10 @@ Configure these server-side environment variables before enabling checkout:
 - `QPAY_INVOICE_CODE`: invoice code issued for the merchant.
 - `QPAY_CALLBACK_URL`: public HTTPS origin of this API (for example `https://api.example.mn`).
 
-Never place QPay credentials in Flutter, commit them to Git, or share them in chat. Use deployment secrets. Run Alembic migrations through revision `0011_order_payment_states` before deploying.
+Never place QPay credentials in Flutter, commit them to Git, or share them in chat. Use deployment secrets. Run `alembic upgrade head` before deploying; the current schema includes payment-state and optional referee-phone migrations through `0012_referee_phone_optional`.
 
 The app creates invoices at `POST /api/v1/payments/qpay/invoice` for store orders, assigned referee bookings, approved venue bookings, accepted provider service requests, and paid club memberships. The API returns QPay QR/deeplink data. The callback and the authenticated `POST /api/v1/payments/qpay/invoices/{id}/check` endpoint both verify the invoice against QPay `POST /v2/payment/check` before settling the order and recording the 5% commission.
 
 QPay Merchant V2 officially documents sandbox/production hosts, Basic-auth token acquisition, Bearer-token API calls, invoice creation, and server-side payment checking. See https://developer.qpay.mn/mn/docs/merchant?version=2.0.0.
 
-The provider net amounts are currently recorded in the ARENA 360 settlement ledger. Actual automatic transfers to individual sellers/referees/clubs are not enabled by a standard single-merchant invoice; a separate payout/settlement arrangement with QPay/banks is required.
+The platform commission is fixed at 5% of verified paid amounts, rounded down to the nearest whole MNT. For example, 50,000₮ produces 2,500₮ commission and 47,500₮ provider net. Duplicate payment events are idempotent; partial/full refund events reverse the commission proportionally. The admin dashboard reports gross, commission, provider net, refunds and unpaid orders; providers can see their own net earnings and transaction history.\n\nThe provider net amounts are currently recorded in the ARENA 360 settlement ledger. Actual automatic transfers to individual sellers/referees/clubs are not enabled by a standard single-merchant invoice; a separate payout/settlement arrangement with QPay/banks is required.
