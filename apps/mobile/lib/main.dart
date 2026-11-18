@@ -480,7 +480,7 @@ class _HomePageState extends State<HomePage> {
             padding: const EdgeInsets.all(22),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                colors: [navy, Color(0xFF244B91)],
+                colors: [navy, Color(0xFF3157B8)],
               ),
               borderRadius: BorderRadius.circular(20),
             ),
@@ -893,12 +893,12 @@ class _RefereeBookingPageState extends State<RefereeBookingPage> {
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(colors: [navy, Color(0xFF244B91)]),
+              gradient: const LinearGradient(colors: [navy, Color(0xFF3157B8)]),
               borderRadius: BorderRadius.circular(18)),
             child: const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('ARENA 360 / REFEREE',
+                Text('ARINA 360 / REFEREE',
                     style: TextStyle(color: Colors.white70,
                         fontWeight: FontWeight.bold)),
                 SizedBox(height: 8),
@@ -1155,7 +1155,7 @@ class _AppUpdatePageState extends State<AppUpdatePage> {
         apkUrl = data['apkUrl']?.toString();
         status = build > installedBuild
             ? 'Шинэ хувилбар бэлэн байна: ' + latestVersion!
-            : 'Таны ARENA 360 хамгийн сүүлийн хувилбар байна.';
+            : 'Таны ARINA 360 хамгийн сүүлийн хувилбар байна.';
       });
       if (build <= installedBuild && showCurrent && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Апп хамгийн сүүлийн хувилбартай байна.')));
@@ -1177,7 +1177,7 @@ class _AppUpdatePageState extends State<AppUpdatePage> {
     try {
       final permission = await Permission.requestInstallPackages.request();
       if (!permission.isGranted) {
-        if (mounted) setState(() => status = 'APK суулгах зөвшөөрөл шаардлагатай. ARENA 360-д зөвшөөрөл өгнө үү.');
+        if (mounted) setState(() => status = 'APK суулгах зөвшөөрөл шаардлагатай. ARINA 360-д зөвшөөрөл өгнө үү.');
         await openAppSettings();
         return;
       }
@@ -1209,11 +1209,11 @@ class _AppUpdatePageState extends State<AppUpdatePage> {
       body: ListView(padding: const EdgeInsets.all(20), children: [
         Container(
           padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(gradient: const LinearGradient(colors: [navy, Color(0xFF244B91)]), borderRadius: BorderRadius.circular(18)),
+          decoration: BoxDecoration(gradient: const LinearGradient(colors: [navy, Color(0xFF3157B8)]), borderRadius: BorderRadius.circular(18)),
           child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Icon(Icons.system_update_alt, color: Colors.white, size: 38),
             SizedBox(height: 12),
-            Text('ARENA 360 UPDATE', style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900)),
+            Text('ARINA 360 UPDATE', style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900)),
             SizedBox(height: 6),
             Text('Шинэ хувилбарыг шалгаж, утсан дээрээ шинэчлээрэй.', style: TextStyle(color: Colors.white70)),
           ]),
@@ -1407,7 +1407,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
-                      colors: [navy, Color(0xFF244B91)],
+                      colors: [navy, Color(0xFF3157B8)],
                     ),
                     borderRadius: BorderRadius.circular(18),
                   ),
@@ -1417,7 +1417,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       Icon(Icons.account_circle, color: Colors.white, size: 42),
                       SizedBox(height: 10),
                       Text(
-                        'ARENA 360 PROFILE',
+                        'ARINA 360 PROFILE',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 20,
