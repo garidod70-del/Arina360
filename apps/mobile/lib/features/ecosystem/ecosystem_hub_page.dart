@@ -1,0 +1,356 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import '../../core/network/api_client.dart';
+
+class EcosystemHubPage extends StatelessWidget {
+  final bool isAdmin;
+  const EcosystemHubPage({super.key, this.isAdmin = false});
+
+  @override
+  Widget build(BuildContext context) {
+    final items = <_HubItem>[
+      _HubItem('QR баталгаажуулалт', Icons.qr_code_2, const QrPassPage()),
+      _HubItem('Медаль, онооны хүснэгт', Icons.military_tech, const MedalBoardPage()),
+      _HubItem('Клуб, дасгалжуулагч', Icons.groups, const ClubPage()),
+      _HubItem('Спорт барааны дэлгүүр', Icons.shopping_bag, const StorePage()),
+      _HubItem('Мэдэгдэл, чат', Icons.forum, const MessageCentrePage()),
+      if (isAdmin) _HubItem('Админ аналитик', Icons.analytics, const AnalyticsPage()),
+    ];
+    return Scaffold(
+      appBar: AppBar(title: const Text('ARENA 360 • Нэгдсэн систем')),
+      body: ListView(padding: const EdgeInsets.all(16), children: [
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(colors: [Color(0xFF101B36), Color(0xFF2456A5)]),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('ONE PLATFORM. ALL SPORTS.', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w800)),
+            SizedBox(height: 8),
+            Text('Спортын нэгдсэн удирдлага', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900)),
+            SizedBox(height: 6),
+            Text('QR • Клуб • Дэлгүүр • Чат • Медаль • Аналитик', style: TextStyle(color: Colors.white70)),
+          ]),
+        ),
+        const SizedBox(height: 16),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: items.length,
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 12, mainAxisSpacing: 12, childAspectRatio: 1.15),
+          itemBuilder: (context, index) {
+            final item = items[index];
+            return Card(child: InkWell(
+              borderRadius: BorderRadius.circular(18),
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => item.page)),
+              child: Padding(padding: const EdgeInsets.all(16), child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Icon(item.icon, size: 34, color: Theme.of(context).colorScheme.primary),
+                  Text(item.title, style: const TextStyle(fontWeight: FontWeight.w900)),
+                  const Align(alignment: Alignment.centerRight, child: Icon(Icons.arrow_forward)),
+                ],
+              )),
+            ));
+          },
+        ),
+      ]),
+    );
+  }
+}
+
+class _HubItem {
+  final String title; final IconData icon; final Widget page;
+  const _HubItem(this.title, this.icon, this.page);
+}
+
+abstract class _EcosystemState<T extends StatefulWidget> extends State<T> {
+  final api = ApiClient();
+  static const secure = FlutterSecureStorage();
+  bool busy = false;
+  String? error;
+  Future<String> token() async {
+    final value = await secure.read(key: 'arena_access_token');
+    if (value == null || value.isEmpty) throw Exception('Нэвтрэх эрх олдсонгүй.');
+    return value;
+  }
+  Future<void> work(Future<void> Function(String) action) async {
+    setState(() { busy = true; error = null; });
+    try { await action(await token()); }
+    catch (e) { if (mounted) setState(() => error = e.toString()); }
+    finally { if (mounted) setState(() => busy = false); }
+  }
+  Widget status() => busy ? const LinearProgressIndicator() : error == null ? const SizedBox.shrink() :
+    Card(color: Theme.of(context).colorScheme.errorContainer, child: Padding(padding: const EdgeInsets.all(12), child: Text(error!)));
+  Future<Map<String, dynamic>?> form(String title, List<_Input> inputs) async {
+    final ctrls = <String, TextEditingController>{};
+    for (final input in inputs) { ctrls[input.key] = TextEditingController(text: input.initial); }
+    final result = await showDialog<Map<String, dynamic>>(context: context, builder: (ctx) => AlertDialog(
+      title: Text(title),
+      content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: inputs.map((f) => Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: TextField(controller: ctrls[f.key], keyboardType: f.number ? TextInputType.number : TextInputType.text, decoration: InputDecoration(labelText: f.label)),
+      )).toList())),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('БОЛИХ')),
+        FilledButton(onPressed: () {
+          final data = <String, dynamic>{};
+          for (final f in inputs) { final v = ctrls[f.key]!.text.trim(); data[f.key] = f.number ? int.tryParse(v) ?? 0 : v; }
+          Navigator.pop(ctx, data);
+        }, child: const Text('ХАДГАЛАХ')),
+      ],
+    ));
+    for (final c in ctrls.values) { c.dispose(); }
+    return result;
+  }
+  void toast(String text) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text))); }
+  @override void dispose() { api.close(); super.dispose(); }
+}
+
+class _Input {
+  final String key, label, initial; final bool number;
+  const _Input(this.key, this.label, {this.initial = '', this.number = false});
+}
+
+class QrPassPage extends StatefulWidget {
+  const QrPassPage({super.key});
+  @override State<QrPassPage> createState() => _QrPassPageState();
+}
+class _QrPassPageState extends _EcosystemState<QrPassPage> {
+  String? code;
+  final verifyInput = TextEditingController();
+  @override void dispose() { verifyInput.dispose(); super.dispose(); }
+  Future<void> issue() async {
+    final data = await form('QR эрх үүсгэх', const [
+      _Input('purpose', 'Зориулалт', initial: 'event_entry'),
+      _Input('reference_type', 'Төрөл: competition / club / fitness_pass', initial: 'fitness_pass'),
+      _Input('reference_id', 'Холбоосын ID', initial: '1', number: true),
+      _Input('expires_in_minutes', 'Хүчинтэй минут', initial: '60', number: true),
+    ]);
+    if (data == null) return;
+    await work((t) async {
+      final result = await api.postAuthorized('/qr/passes', token: t, body: data);
+      if (mounted) setState(() => code = result['token'].toString());
+    });
+  }
+  Future<void> verify() async {
+    if (verifyInput.text.trim().isEmpty) return;
+    await work((t) async {
+      await api.postAuthorized('/qr/verify', token: t, body: {'token': verifyInput.text.trim()});
+      verifyInput.clear(); toast('QR амжилттай баталгаажлаа.');
+    });
+  }
+  @override Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('QR баталгаажуулалт')),
+    body: ListView(padding: const EdgeInsets.all(16), children: [
+      status(),
+      Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(children: [
+        const Icon(Icons.qr_code_2, size: 44),
+        const Text('ХУГАЦААТАЙ НЭГ УДААГИЙН QR', style: TextStyle(fontWeight: FontWeight.w900)),
+        FilledButton.icon(onPressed: busy ? null : issue, icon: const Icon(Icons.add), label: const Text('QR ҮҮСГЭХ')),
+        if (code != null) QrImageView(data: code!, size: 220, backgroundColor: Colors.white),
+        if (code != null) SelectableText(code!, textAlign: TextAlign.center),
+      ]))),
+      Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(children: [
+        TextField(controller: verifyInput, decoration: const InputDecoration(labelText: 'QR токен оруулах')),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(onPressed: busy ? null : verify, icon: const Icon(Icons.verified), label: const Text('БАТАЛГААЖУУЛАХ')),
+        const Text('Камераар скан хийхийг дараагийн дэд шатанд холбоно.', style: TextStyle(fontSize: 11, color: Colors.blueGrey)),
+      ]))),
+    ]),
+  );
+}
+
+class MedalBoardPage extends StatefulWidget {
+  const MedalBoardPage({super.key});
+  @override State<MedalBoardPage> createState() => _MedalBoardPageState();
+}
+class _MedalBoardPageState extends _EcosystemState<MedalBoardPage> {
+  List<Map<String, dynamic>> rows = [];
+  @override void initState() { super.initState(); refresh(); }
+  Future<void> refresh() async => work((t) async { rows = await api.getList('/leaderboards/medals', token: t); if (mounted) setState(() {}); });
+  Future<void> award() async {
+    final data = await form('Медаль бүртгэх', const [
+      _Input('tournament_id', 'Тэмцээний ID', initial: '1', number: true),
+      _Input('participant_id', 'Тамирчны ID', initial: '1', number: true),
+      _Input('medal', 'gold / silver / bronze', initial: 'gold'),
+      _Input('points', 'Оноо', initial: '10', number: true),
+    ]);
+    if (data == null) return;
+    await work((t) async {
+      final id = data.remove('tournament_id');
+      await api.postAuthorized('/competitions/' + id.toString() + '/medals', token: t, body: data);
+      rows = await api.getList('/leaderboards/medals', token: t);
+      if (mounted) setState(() {}); toast('Медаль бүртгэгдлээ.');
+    });
+  }
+  @override Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Медаль, онооны хүснэгт'), actions: [IconButton(onPressed: refresh, icon: const Icon(Icons.refresh))]),
+    floatingActionButton: FloatingActionButton.extended(onPressed: busy ? null : award, icon: const Icon(Icons.add), label: const Text('МЕДАЛЬ')),
+    body: ListView(padding: const EdgeInsets.all(16), children: [
+      status(), const Text('КЛУБЫН МЕДАЛИЙН ЧАНСАА', style: TextStyle(fontWeight: FontWeight.w900)),
+      ...rows.asMap().entries.map((e) => Card(child: ListTile(
+        leading: CircleAvatar(child: Text((e.key + 1).toString())),
+        title: Text(e.value['club']?.toString() ?? 'Клуб'),
+        subtitle: Text('Алт ' + e.value['gold'].toString() + ' • Мөнгө ' + e.value['silver'].toString() + ' • Хүрэл ' + e.value['bronze'].toString()),
+        trailing: Text(e.value['points'].toString() + ' оноо'),
+      ))),
+    ]),
+  );
+}
+
+class ClubPage extends StatefulWidget {
+  const ClubPage({super.key});
+  @override State<ClubPage> createState() => _ClubPageState();
+}
+class _ClubPageState extends _EcosystemState<ClubPage> {
+  List<Map<String, dynamic>> clubs = [];
+  @override void initState() { super.initState(); refresh(); }
+  Future<void> refresh() async => work((t) async { clubs = await api.getList('/clubs', token: t); if (mounted) setState(() {}); });
+  Future<void> createClub() async {
+    final data = await form('Клуб үүсгэх', const [
+      _Input('name', 'Клубын нэр'), _Input('sport', 'Спортын төрөл', initial: 'Жүдо'),
+      _Input('region', 'Аймаг / хот'), _Input('description', 'Тайлбар'),
+      _Input('contact_phone', 'Утас'),
+    ]);
+    if (data == null) return;
+    await work((t) async { await api.postAuthorized('/clubs', token: t, body: data); toast('Клубын бүртгэл үүслээ.'); });
+  }
+  Future<void> coach() async {
+    final data = await form('Дасгалжуулагчийн профайл', const [
+      _Input('club_id', 'Клубын ID (0 бол байхгүй)', initial: '0', number: true),
+      _Input('sport', 'Спортын төрөл', initial: 'Жүдо'), _Input('qualification', 'Мэргэжлийн үнэмлэх'),
+      _Input('experience_years', 'Ажилласан жил', initial: '0', number: true),
+      _Input('specialties', 'Мэргэшсэн чиглэл'),
+    ]);
+    if (data == null) return;
+    if (data['club_id'] == 0) data['club_id'] = null;
+    await work((t) async { await api.postAuthorized('/coaches/profile', token: t, body: data); toast('Дасгалжуулагчийн мэдээлэл хадгалагдлаа.'); });
+  }
+  Future<void> join(int id) async => work((t) async {
+    await api.postAuthorized('/clubs/' + id.toString() + '/join', token: t, body: {}); toast('Элсэх хүсэлт илгээгдлээ.');
+  });
+  @override Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Клуб, дасгалжуулагч'), actions: [IconButton(onPressed: refresh, icon: const Icon(Icons.refresh))]),
+    floatingActionButton: Column(mainAxisSize: MainAxisSize.min, children: [
+      FloatingActionButton.small(heroTag: 'coach', onPressed: coach, child: const Icon(Icons.school)),
+      const SizedBox(height: 8),
+      FloatingActionButton.extended(heroTag: 'club', onPressed: createClub, icon: const Icon(Icons.add), label: const Text('КЛУБ')),
+    ]),
+    body: ListView(padding: const EdgeInsets.all(16), children: [
+      status(),
+      ...clubs.map((x) => Card(child: ListTile(
+        leading: const Icon(Icons.groups), title: Text(x['name'].toString()),
+        subtitle: Text(x['sport'].toString() + ' • ' + x['region'].toString()),
+        trailing: TextButton(onPressed: () => join(x['id'] as int), child: const Text('ЭЛСЭХ')),
+      ))),
+    ]),
+  );
+}
+
+class StorePage extends StatefulWidget {
+  const StorePage({super.key});
+  @override State<StorePage> createState() => _StorePageState();
+}
+class _StorePageState extends _EcosystemState<StorePage> {
+  List<Map<String, dynamic>> products = [];
+  Map<String, dynamic> cart = {};
+  @override void initState() { super.initState(); refresh(); }
+  Future<void> refresh() async => work((t) async {
+    products = await api.getList('/store/products', token: t); cart = await api.get('/store/cart', token: t); if (mounted) setState(() {});
+  });
+  Future<void> addProduct() async {
+    final data = await form('Бараа нэмэх', const [
+      _Input('title', 'Барааны нэр'), _Input('description', 'Тайлбар'),
+      _Input('category', 'Ангилал'), _Input('price', 'Үнэ ₮', number: true), _Input('stock', 'Үлдэгдэл', number: true),
+    ]);
+    if (data == null) return;
+    await work((t) async { await api.postAuthorized('/store/products', token: t, body: data); await refresh(); });
+  }
+  Future<void> addCart(int id) async => work((t) async {
+    await api.postAuthorized('/store/cart', token: t, body: {'product_id': id, 'quantity': 1});
+    cart = await api.get('/store/cart', token: t); if (mounted) setState(() {}); toast('Сагсанд нэмэгдлээ.');
+  });
+  Future<void> checkout() async {
+    final data = await form('Захиалга үүсгэх', const [_Input('delivery_address', 'Хүргэлтийн хаяг'), _Input('contact_phone', 'Утас')]);
+    if (data == null) return;
+    await work((t) async { await api.postAuthorized('/store/checkout', token: t, body: data); await refresh(); toast('Захиалга үүслээ. Онлайн төлбөр холбогдоогүй.'); });
+  }
+  @override Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Спорт барааны дэлгүүр'), actions: [IconButton(onPressed: refresh, icon: const Icon(Icons.refresh))]),
+    floatingActionButton: FloatingActionButton.extended(onPressed: addProduct, icon: const Icon(Icons.add), label: const Text('БАРАА НЭМЭХ')),
+    body: ListView(padding: const EdgeInsets.all(16), children: [
+      status(),
+      Card(child: Padding(padding: const EdgeInsets.all(12), child: Column(children: [
+        Text('Сагсны дүн: ' + (cart['total_amount'] ?? 0).toString() + ' ₮'),
+        FilledButton(onPressed: (cart['items'] as List? ?? []).isEmpty ? null : checkout, child: const Text('ЗАХИАЛГА ҮҮСГЭХ')),
+      ]))),
+      ...products.map((x) => Card(child: ListTile(
+        title: Text(x['title'].toString()), subtitle: Text(x['category'].toString() + ' • Үлдэгдэл ' + x['stock'].toString()),
+        trailing: TextButton(onPressed: () => addCart(x['id'] as int), child: Text(x['price'].toString() + ' ₮ +')),
+      ))),
+    ]),
+  );
+}
+
+class MessageCentrePage extends StatefulWidget {
+  const MessageCentrePage({super.key});
+  @override State<MessageCentrePage> createState() => _MessageCentrePageState();
+}
+class _MessageCentrePageState extends _EcosystemState<MessageCentrePage> {
+  List<Map<String, dynamic>> notes = [];
+  List<Map<String, dynamic>> chats = [];
+  @override void initState() { super.initState(); refresh(); }
+  Future<void> refresh() async => work((t) async {
+    notes = await api.getList('/notifications', token: t); chats = await api.getList('/chat/conversations', token: t); if (mounted) setState(() {});
+  });
+  Future<void> startChat() async {
+    final data = await form('Чат эхлүүлэх', const [_Input('other_user_id', 'Хэрэглэгчийн ID', number: true)]);
+    if (data == null) return;
+    await work((t) async {
+      final result = await api.postAuthorized('/chat/conversations', token: t, body: data);
+      toast('Чат үүслээ. ID: ' + result['id'].toString());
+      chats = await api.getList('/chat/conversations', token: t); if (mounted) setState(() {});
+    });
+  }
+  Future<void> read(int id) async => work((t) async {
+    await api.postAuthorized('/notifications/' + id.toString() + '/read', token: t, body: {});
+    notes = await api.getList('/notifications', token: t); if (mounted) setState(() {});
+  });
+  @override Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Мэдэгдэл, чат'), actions: [IconButton(onPressed: refresh, icon: const Icon(Icons.refresh))]),
+    floatingActionButton: FloatingActionButton.extended(onPressed: startChat, icon: const Icon(Icons.chat), label: const Text('ЧАТ ЭХЛҮҮЛЭХ')),
+    body: ListView(padding: const EdgeInsets.all(16), children: [
+      status(), const Text('МЭДЭГДЭЛ', style: TextStyle(fontWeight: FontWeight.w900)),
+      ...notes.map((x) => Card(child: ListTile(
+        title: Text(x['title'].toString()), subtitle: Text(x['body'].toString()),
+        trailing: x['is_read'] == true ? const Icon(Icons.check) : IconButton(onPressed: () => read(x['id'] as int), icon: const Icon(Icons.done)),
+      ))),
+      const SizedBox(height: 12), const Text('ЧАТ', style: TextStyle(fontWeight: FontWeight.w900)),
+      ...chats.map((x) => Card(child: ListTile(
+        leading: const Icon(Icons.person), title: Text('Хэрэглэгч #' + x['other_user_id'].toString()),
+        subtitle: Text(x['last_message']?.toString() ?? 'Шинэ харилцан яриа'),
+      ))),
+    ]),
+  );
+}
+
+class AnalyticsPage extends StatefulWidget {
+  const AnalyticsPage({super.key});
+  @override State<AnalyticsPage> createState() => _AnalyticsPageState();
+}
+class _AnalyticsPageState extends _EcosystemState<AnalyticsPage> {
+  Map<String, dynamic> stats = {};
+  @override void initState() { super.initState(); refresh(); }
+  Future<void> refresh() async => work((t) async { stats = await api.get('/admin/analytics', token: t); if (mounted) setState(() {}); });
+  @override Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Админ аналитик'), actions: [IconButton(onPressed: refresh, icon: const Icon(Icons.refresh))]),
+    body: ListView(padding: const EdgeInsets.all(16), children: [
+      status(),
+      ...stats.entries.map((x) => Card(child: ListTile(title: Text(x.key), trailing: Text(x.value.toString(), style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18))))),
+    ]),
+  );
+}
