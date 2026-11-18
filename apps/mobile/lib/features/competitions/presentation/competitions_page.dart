@@ -42,7 +42,7 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
     if (!ApiConfig.isConfigured) {
       setState(() {
         _items = [];
-        _error = 'Тэмцээний бодит мэдээлэл харахын тулд ARENA_API_BASE_URL серверийн хаягийг тохируулна уу.';
+        _error = 'Тэмцээний бодит мэдээлэл харахын тулд ARINA_API_BASE_URL серверийн хаягийг тохируулна уу.';
       });
       return;
     }
@@ -147,7 +147,7 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Color(0xFF101B36), Color(0xFF2456A5)],
+                  colors: [Color(0xFF211052), Color(0xFF4330A8)],
                 ),
                 borderRadius: BorderRadius.circular(20),
               ),
@@ -157,7 +157,7 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
                   Icon(Icons.emoji_events, color: Colors.white, size: 36),
                   SizedBox(height: 10),
                   Text(
-                    'ARENA 360 COMPETITIONS',
+                    'ARINA 360 COMPETITIONS',
                     style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w800),
                   ),
                   SizedBox(height: 6),
@@ -251,7 +251,7 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
                         children: [
                           Row(
                             children: [
-                              const Icon(Icons.emoji_events, color: Color(0xFF2878FF)),
+                              const Icon(Icons.emoji_events, color: Color(0xFF7043EA)),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
@@ -273,7 +273,7 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
                           ),
                           const Align(
                             alignment: Alignment.centerRight,
-                            child: Text('ДЭЛГЭРЭНГҮЙ  →', style: TextStyle(color: Color(0xFF2878FF), fontWeight: FontWeight.bold)),
+                            child: Text('ДЭЛГЭРЭНГҮЙ  →', style: TextStyle(color: Color(0xFF7043EA), fontWeight: FontWeight.bold)),
                           ),
                         ],
                       ),
