@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:arena360/main.dart';
+import 'package:arena360/features/ecosystem/ecosystem_hub_page.dart';
 
 void main() {
   testWidgets('ARINA 360 app displays the authentication screen', (tester) async {
@@ -65,9 +66,12 @@ void main() {
     expect(tester.takeException(), isNull);
 
     await tester.ensureVisible(find.text('Спорт барааны дэлгүүр'));
-    await tester.ensureVisible(find.text('Спорт барааны дэлгүүр'));
-    await tester.tap(find.text('Спорт барааны дэлгүүр'));
-    await tester.pump(const Duration(milliseconds: 800));
+    final storeTile = find.ancestor(
+      of: find.text('Спорт барааны дэлгүүр'),
+      matching: find.byType(InkWell),
+    ).first;
+    await tester.tap(storeTile);
+    await tester.pumpAndSettle();
     expect(find.byType(StorePage), findsOneWidget);
     expect(tester.takeException(), isNull);
 
