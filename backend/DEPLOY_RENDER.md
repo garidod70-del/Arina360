@@ -1,6 +1,6 @@
 # ARENA 360 API — HTTPS deployment
 
-Import the repository into Render and apply the root `render.yaml` Blueprint. Render provisions the Docker web service and PostgreSQL database and assigns a managed HTTPS URL. The container applies Alembic migrations before starting the API.
+Import the repository into Render and apply the root `render.yaml` Blueprint. Render provisions the Docker web service and PostgreSQL database and assigns a managed HTTPS URL. During Blueprint setup, fill the prompted `CORS_ORIGINS`, `QPAY_CLIENT_ID`, `QPAY_CLIENT_SECRET`, `QPAY_INVOICE_CODE`, and `QPAY_CALLBACK_URL` values. Use only your real QPay Merchant V2 production credentials; never commit or send them in chat. Set `CORS_ORIGINS` to the exact HTTPS origin(s) of your web admin/client, comma-separated. Set `QPAY_CALLBACK_URL` to the public API origin, e.g. `https://YOUR-SERVICE.onrender.com` (no path). The Blueprint pins `QPAY_BASE_URL` to the production merchant host. The container applies Alembic migrations before starting the API.
 
 ## Verify deployment
 Open `https://YOUR-SERVICE.onrender.com/health`; expected response:
@@ -23,7 +23,7 @@ Use the admin account's bearer token:
 - Only verified referees appear in the public directory and can be assigned.
 
 ## Build the live API APK
-Set GitHub repository variable `ARENA_API_BASE_URL` to the exact HTTPS origin, e.g. `https://arena360-api.onrender.com` (no `/api/v1` suffix), then run the `ARENA 360 Android APK` workflow. The build injects this value into Flutter. If the variable is empty, the APK deliberately stays in local prototype mode.
+Set GitHub Actions repository variable `ARENA_API_BASE_URL` (not a secret) to the exact HTTPS origin, e.g. `https://arena360-api.onrender.com` (no `/api/v1` suffix), then run the `ARENA 360 Signed Release` workflow. The build injects this value into Flutter and refuses to produce a production APK when it is missing or not HTTPS.
 
 ## Deployment boundary
 Repository code cannot create a Render account, accept its terms, select a paid plan, or approve the service on the owner's behalf. The owner must import/apply the Blueprint once. The included free database is for initial smoke testing only and may expire; use a persistent database plan before public production. The API records an administrator's licence check; it does not independently query the federation registry.
