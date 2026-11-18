@@ -27,7 +27,13 @@ void main() {
     await tester.tap(find.text('НЭВТРЭХ'));
     await tester.pump();
 
-    expect(find.textContaining('Серверийн хаяг тохируулаагүй байна'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(SnackBar),
+        matching: find.textContaining('Бодит бүртгэл, нэвтрэлт ашиглах боломжгүй'),
+      ),
+      findsOneWidget,
+    );
     expect(find.text('ONE PLATFORM. ALL SPORTS.'), findsNothing);
     expect(find.text('Нэвтрэх'), findsOneWidget);
   });
