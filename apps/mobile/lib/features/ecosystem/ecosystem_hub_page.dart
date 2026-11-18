@@ -684,6 +684,12 @@ class _ProviderEarningsPageState extends _EcosystemState<ProviderEarningsPage> {
           ListTile(dense: true, title: const Text('Гүйлгээний тоо'), trailing: Text((summary['transactions'] ?? 0).toString(), style: const TextStyle(fontWeight: FontWeight.w800))),
         ],
       ))),
+      const Text('СҮҮЛИЙН ГҮЙЛГЭЭ', style: TextStyle(fontWeight: FontWeight.w900)),
+      ...((summary['recent_transactions'] as List? ?? []).map((entry) => Card(child: ListTile(
+        title: Text('${entry['category']} • №${entry['order_id']}'),
+        subtitle: Text('Нийт ${entry['gross_mnt']} ₮ • Шимтгэл ${entry['commission_mnt']} ₮'),
+        trailing: Text('${entry['net_mnt']} ₮', style: const TextStyle(fontWeight: FontWeight.w900)),
+      )))),
       const Text('Тайлбар: Энэ тайлан нь QPay-ээр баталгаажсан гүйлгээ болон шимтгэлийн бүртгэлийг харуулна. Банкны данс руу бодитоор шилжүүлсэн төлбөрийн түүх биш.', style: TextStyle(fontSize: 12, color: Colors.blueGrey)),
     ]),
   );
