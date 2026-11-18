@@ -15,75 +15,88 @@ def test_five_percent_commission_uses_integer_mnt_rounding():
 
 
 def test_payment_is_idempotent_and_partial_refunds_reverse_commission_proportionally():
-    db = SessionLocal()
     suffix = uuid.uuid4().hex[:12]
-    buyer = User(phone=f"+976{suffix}01", password_hash="test")
-    provider = User(phone=f"+976{suffix}02", password_hash="test")
-    db.add_all([buyer, provider])
-    db.flush()
-    payment_id = None
+    buyer_id = provider_id = payment_id = None
+    db = SessionLocal()
     try:
+        buyer = User(phone=f"+976{suffix}01", password_hash="test")
+        provider = User(phone=f"+976{suffix}02", password_hash="test")
+        db.add_all([buyer, provider])
+        db.flush()
+        buyer_id, provider_id = buyer.id, provider.id
         payment, created = record_payment(
             db, provider="qpay", external_payment_id=f"invoice-{suffix}",
             order_type="store_order", order_id=f"order-{suffix}",
-            category="sports_store", buyer_user_id=buyer.id,
-            provider_user_id=provider.id, amount=100_000,
-            allocations=[{"provider_user_id": provider.id, "gross_amount": 100_000}],
+            category="sports_store", buyer_user_id=buyer_id,
+            provider_user_id=provider_id, amount=100_000,
+            allocations=[{"provider_user_id": provider_id, "gross_amount": 100_000}],
         )
         assert created is True
         payment_id = payment.id
         assert payment.commission_amount == 5_000
         assert payment.provider_net_amount == 95_000
         db.commit()
+    finally:
+        db.close()
 
+    # Re-open a fresh session to prove settlement/refund records survive commits.
+    db = SessionLocal()
+    try:
+        payment = db.get(PaymentTransaction, payment_id)
+        assert payment is not None
         duplicate, duplicate_created = record_payment(
             db, provider="qpay", external_payment_id=f"invoice-{suffix}",
             order_type="store_order", order_id=f"order-{suffix}",
-            category="sports_store", buyer_user_id=buyer.id,
-            provider_user_id=provider.id, amount=100_000,
-            allocations=[{"provider_user_id": provider.id, "gross_amount": 100_000}],
+            category="sports_store", buyer_user_id=buyer_id,
+            provider_user_id=provider_id, amount=100_000,
+            allocations=[{"provider_user_id": provider_id, "gross_amount": 100_000}],
         )
-        assert duplicate.id == payment.id
+        assert duplicate.id == payment_id
         assert duplicate_created is False
-        db.flush()
 
         partial, partial_created = record_refund(
             db, provider="qpay", external_payment_id=f"invoice-{suffix}",
             external_event_id=f"refund-part-{suffix}", refund_amount=20_000,
         )
         assert partial_created is True
-        allocation = db.query(PaymentAllocation).filter_by(payment_id=payment.id).one()
-        assert partial.refunded_amount == 20_000
-        assert partial.refunded_commission == 1_000
+        db.commit()
+    finally:
+        db.close()
+
+    db = SessionLocal()
+    try:
+        payment = db.get(PaymentTransaction, payment_id)
+        allocation = db.query(PaymentAllocation).filter_by(payment_id=payment_id).one()
+        assert payment.refunded_amount == 20_000
+        assert payment.refunded_commission == 1_000
         assert allocation.refunded_amount == 20_000
         assert allocation.refunded_commission == 1_000
-        assert partial.status == "partially_refunded"
+        assert payment.status == "partially_refunded"
 
         repeated, repeated_created = record_refund(
             db, provider="qpay", external_payment_id=f"invoice-{suffix}",
             external_event_id=f"refund-part-{suffix}", refund_amount=20_000,
         )
-        assert repeated.id == payment.id
+        assert repeated.id == payment_id
         assert repeated_created is False
-        db.flush()
-
         final, final_created = record_refund(
             db, provider="qpay", external_payment_id=f"invoice-{suffix}",
             external_event_id=f"refund-rest-{suffix}", refund_amount=80_000,
         )
         assert final_created is True
+        db.commit()
         assert final.refunded_amount == 100_000
         assert final.refunded_commission == 5_000
         assert final.status == "refunded"
         assert allocation.refunded_amount == 100_000
         assert allocation.refunded_commission == 5_000
-        db.commit()
     finally:
         if payment_id is not None:
             db.query(CommissionLedger).filter_by(payment_id=payment_id).delete()
             db.query(PaymentAllocation).filter_by(payment_id=payment_id).delete()
             db.query(PaymentTransaction).filter_by(id=payment_id).delete()
-        db.query(User).filter(User.id.in_([buyer.id, provider.id])).delete(synchronize_session=False)
+        if buyer_id is not None and provider_id is not None:
+            db.query(User).filter(User.id.in_([buyer_id, provider_id])).delete(synchronize_session=False)
         db.commit()
         db.close()
 
