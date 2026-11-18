@@ -73,7 +73,7 @@ def _order_for_payment(db: Session, user: User, order_type: str, order_id: int):
         order = db.get(VenueBooking, order_id)
         if order is None or order.customer_id != user.id:
             raise HTTPException(status_code=404, detail="Заалын захиалга олдсонгүй.")
-        if order.status != "pending" or order.payment_status == "paid":
+        if order.status != "confirmed" or order.payment_status == "paid":
             raise HTTPException(status_code=409, detail="Энэ заалын захиалга төлбөр хүлээн авах төлөвт биш байна.")
         slot = db.get(VenueSlot, order.slot_id)
         if slot is None:
