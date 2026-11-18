@@ -2,6 +2,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.database import SessionLocal
+from app.models import User
 
 
 @pytest.fixture(scope="module")
@@ -39,3 +41,37 @@ def test_wrong_password_is_rejected(client):
     client.post("/api/v1/auth/register", json={"phone": phone, "password": TEST_PASSWORD})
     response = client.post("/api/v1/auth/login", json={"phone": phone, "password": "not-the-test-password"})
     assert response.status_code == 401
+
+
+
+def test_auth_rejects_missing_and_malformed_bearer_tokens(client):
+    assert client.get("/api/v1/auth/me").status_code == 401
+    malformed = client.get(
+        "/api/v1/auth/me",
+        headers={"Authorization": "Bearer not-a-valid-jwt"},
+    )
+    assert malformed.status_code == 401
+
+
+def test_inactive_user_cannot_login_or_use_existing_access_token(client):
+    phone = "+97699123980"
+    payload = {"phone": phone, "password": TEST_PASSWORD}
+    registered = client.post("/api/v1/auth/register", json=payload)
+    assert registered.status_code == 201
+    token = registered.json()["access_token"]
+
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter(User.phone == phone).one()
+        user.is_active = False
+        db.commit()
+    finally:
+        db.close()
+
+    login = client.post("/api/v1/auth/login", json=payload)
+    assert login.status_code == 401
+    profile = client.get(
+        "/api/v1/auth/me",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert profile.status_code == 401
