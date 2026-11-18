@@ -5,7 +5,6 @@ on:
     branches:
       - feature/arena360-phase4-ecosystem
       - feature/arena360-quality-hardening
-      - feature/arena360-quality-hardening
     paths:
       - "backend/**"
       - "apps/mobile/**"
@@ -16,6 +15,10 @@ on:
       - "apps/mobile/**"
       - ".github/workflows/phase4-validation.yml"
   workflow_dispatch:
+
+concurrency:
+  group: arena360-phase4-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
