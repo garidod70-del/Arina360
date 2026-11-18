@@ -25,6 +25,7 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
   List<Map<String, dynamic>> _requests = [];
   int? _currentUserId;
   Map<String, dynamic> _profile = {};
+  Map<String, dynamic> _earnings = {};
   static const _sportOptions = <String>['Жүдо', 'Самбо', 'Чөлөөт бөх', 'Үндэсний бөх', 'Бокс', 'Волейбол', 'Сагсан бөмбөг', 'Хөл бөмбөг', 'Таеквондо', 'Каратэ', 'Гимнастик', 'Бусад'];
   static const _regions = <String>['Улаанбаатар', 'Архангай', 'Баян-Өлгий', 'Баянхонгор', 'Булган', 'Говь-Алтай', 'Говьсүмбэр', 'Дархан-Уул', 'Дорноговь', 'Дорнод', 'Дундговь', 'Завхан', 'Орхон', 'Өвөрхангай', 'Өмнөговь', 'Сүхбаатар', 'Сэлэнгэ', 'Төв', 'Увс', 'Ховд', 'Хөвсгөл', 'Хэнтий'];
   bool _loading = false;
@@ -183,6 +184,12 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
         token: token,
       );
       final requests = await _api.getList('/services/requests/me', token: token);
+      Map<String, dynamic> earnings = {};
+      try {
+        earnings = await _api.get('/payments/provider/summary', token: token);
+      } catch (_) {
+        // Hide earnings until a provider has settled transactions.
+      }
       final currentUser = await _api.get('/auth/me', token: token);
       Map<String, dynamic> profile = {};
       try {
@@ -199,6 +206,7 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
         _requests = requests;
         _currentUserId = currentUser['id'] as int?;
         _profile = profile;
+        _earnings = earnings;
       });
     } catch (error) {
       if (mounted) {
@@ -853,6 +861,14 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
     );
   }
 
+  Widget _earningRow(String label, dynamic value) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 3),
+    child: Row(children: [
+      Expanded(child: Text(label)),
+      Text('${value ?? 0} ₮', style: const TextStyle(fontWeight: FontWeight.w800)),
+    ]),
+  );
+
   Widget _buildSearchFilters() {
     return Card(
       child: Padding(
@@ -951,6 +967,20 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
                 ],
               ),
             ),
+            if ((_earnings['transactions'] ?? 0) > 0)
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    const Text('МИНИЙ ҮЙЛЧИЛГЭЭНИЙ ОРЛОГО', style: TextStyle(fontWeight: FontWeight.w900)),
+                    const SizedBox(height: 8),
+                    _earningRow('Нийт төлбөр', _earnings['gross_paid_mnt']),
+                    _earningRow('5% шимтгэл', _earnings['commission_deducted_mnt']),
+                    _earningRow('Танд ногдох цэвэр орлого', _earnings['net_after_commission_and_refunds_mnt']),
+                    _earningRow('Буцаалт', _earnings['refunds_mnt']),
+                  ]),
+                ),
+              ),
             const SizedBox(height: 14),
             _buildSearchFilters(),
             const SizedBox(height: 14),
