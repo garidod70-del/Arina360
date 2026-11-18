@@ -3,6 +3,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../core/network/api_client.dart';
+import '../../core/widgets/qpay_payment_dialog.dart';
 
 class EcosystemHubPage extends StatelessWidget {
   final bool isAdmin;
@@ -310,7 +311,7 @@ class _ClubPageState extends _EcosystemState<ClubPage> {
     final data = await form('Клуб үүсгэх', const [
       _Input('name', 'Клубын нэр'), _Input('sport', 'Спортын төрөл', initial: 'Жүдо', options: ['Жүдо', 'Самбо', 'Чөлөөт бөх', 'Үндэсний бөх', 'Бокс', 'Волейбол', 'Сагсан бөмбөг', 'Хөл бөмбөг', 'Таеквондо', 'Каратэ', 'Гимнастик', 'Бусад']),
       _Input('region', 'Аймаг / хот'), _Input('description', 'Тайлбар'),
-      _Input('contact_phone', 'Утас'),
+      _Input('contact_phone', 'Утас'), _Input('membership_fee', 'Гишүүнчлэлийн үнэ ₮', initial: '0', number: true),
     ]);
     if (data == null) return;
     await work((t) async {
@@ -332,7 +333,17 @@ class _ClubPageState extends _EcosystemState<ClubPage> {
     await work((t) async { await api.postAuthorized('/coaches/profile', token: t, body: data); toast('Дасгалжуулагчийн мэдээлэл хадгалагдлаа.'); });
   }
   Future<void> join(int id) async => work((t) async {
-    await api.postAuthorized('/clubs/' + id.toString() + '/join', token: t, body: {}); toast('Элсэх хүсэлт илгээгдлээ.');
+    final membership = await api.postAuthorized('/clubs/' + id.toString() + '/join', token: t, body: {});
+    if (membership['status'] == 'pending_payment') {
+      await QPayPaymentDialog.open(
+        context: context, api: api, token: t, orderType: 'club_membership',
+        orderId: membership['id'] as int,
+        onPaid: () { toast('Клубын гишүүнчлэлийн төлбөр баталгаажлаа.'); refresh(); },
+      );
+    } else {
+      toast('Үнэгүй клубын элсэх хүсэлт илгээгдлээ.');
+    }
+    await refresh();
   });
   @override Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('Клуб, дасгалжуулагч'), actions: [IconButton(onPressed: refresh, icon: const Icon(Icons.refresh))]),
@@ -346,7 +357,7 @@ class _ClubPageState extends _EcosystemState<ClubPage> {
       const Text('БАТАЛГААЖСАН КЛУБУУД', style: TextStyle(fontWeight: FontWeight.w900)),
       ...clubs.map((x) => Card(child: ListTile(
         leading: const Icon(Icons.groups), title: Text(x['name'].toString()),
-        subtitle: Text(x['sport'].toString() + ' • ' + x['region'].toString()),
+        subtitle: Text(x['sport'].toString() + ' • ' + x['region'].toString() + ' • Гишүүнчлэл: ' + (x['membership_fee'] ?? 0).toString() + ' ₮'),
         trailing: TextButton(onPressed: busy ? null : () => join(x['id'] as int), child: const Text('ЭЛСЭХ')),
       ))),
       const SizedBox(height: 12),
