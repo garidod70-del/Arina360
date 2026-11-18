@@ -77,7 +77,15 @@ jobs:
         working-directory: apps/mobile
         run: |
           flutter create --platforms=android --project-name arena360 --org mn.arena360 .
-          grep -q 'android.permission.INTERNET' android/app/src/main/AndroidManifest.xml || sed -i '/<application/i\\    <uses-permission android:name="android.permission.INTERNET" />' android/app/src/main/AndroidManifest.xml
+          python3 - <<'PY'
+          from pathlib import Path
+          manifest = Path("android/app/src/main/AndroidManifest.xml")
+          source = manifest.read_text()
+          permission = '    <uses-permission android:name="android.permission.INTERNET" />'
+          if "android.permission.INTERNET" not in source:
+              source = source.replace("<application", permission + "\\n    <application", 1)
+              manifest.write_text(source)
+          PY
           echo "$KEYSTORE_BASE64" | base64 --decode > android/app/arena-upload-key.jks
           cat > android/key.properties <<EOF
           storePassword=$KEYSTORE_PASSWORD
