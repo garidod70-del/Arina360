@@ -77,6 +77,9 @@ void main() {
 
     await tester.pageBack();
     await tester.pumpAndSettle();
+    await tester.drag(find.byType(ListView).first, const Offset(0, -250));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Мэдэгдэл, чат'));
     await tester.tap(find.text('Мэдэгдэл, чат'));
     await tester.pumpAndSettle();
     expect(
