@@ -57,3 +57,19 @@ The app creates invoices at `POST /api/v1/payments/qpay/invoice` for store order
 QPay Merchant V2 officially documents sandbox/production hosts, Basic-auth token acquisition, Bearer-token API calls, invoice creation, and server-side payment checking. See https://developer.qpay.mn/mn/docs/merchant?version=2.0.0.
 
 The platform commission is fixed at 5% of verified paid amounts, rounded down to the nearest whole MNT. For example, 50,000₮ produces 2,500₮ commission and 47,500₮ provider net. Duplicate payment events are idempotent; partial/full refund events reverse the commission proportionally. The admin dashboard reports gross, commission, provider net, refunds and unpaid orders; providers can see their own net earnings and transaction history.\n\nThe provider net amounts are currently recorded in the ARENA 360 settlement ledger. Actual automatic transfers to individual sellers/referees/clubs are not enabled by a standard single-merchant invoice; a separate payout/settlement arrangement with QPay/banks is required.
+
+## Production activation checklist
+
+The production settings loader now fails closed unless PostgreSQL, a strong JWT secret, disabled automatic table creation, HTTPS CORS origins, the QPay production host, merchant credentials, invoice code and a public HTTPS callback origin are configured. Keep all credentials in the deployment platform's secret manager; never commit them.
+
+The Android signed-release workflow requires two repository Actions secrets:
+- `ARENA_API_BASE_URL`: the public HTTPS API origin (for example `https://api.your-domain.mn`; do not include `/api/v1`).
+- `ARENA_SIGNING_CONFIG`: the signing configuration used by the release workflow.
+
+The CI APKs are validation builds. They do not include a production API origin or a production signing key unless explicitly configured. The mobile app no longer permits a local demo login when the API origin is missing.
+
+Seller order alerts are currently in-app notifications. They include the buyer's registered phone number after QPay payment is verified; SMS delivery and push notifications are not connected. Configure an SMS/OTP or push provider separately before promising off-app delivery.
+
+The 5% platform commission and 95% provider net are calculated and stored in the settlement ledger. Automatic transfers to provider bank accounts are not enabled. They require a supported QPay/bank disbursement agreement/API, verified beneficiary accounts, settlement rules, and credentials. Do not mark provider earnings as paid out until an external transfer is confirmed.
+
+Before public launch, complete a real-device Android install and end-to-end test against the production HTTPS API, verify a low-value live QPay transaction and refund with the merchant, validate all migrations against the production PostgreSQL version, and configure backups, monitoring, rate limiting, phone ownership verification and incident handling.
