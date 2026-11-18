@@ -62,5 +62,6 @@ void main() {
     await tester.tap(find.text('НЭГДСЭН СПОРТЫН СИСТЕМ'));
     await tester.pumpAndSettle();
     expect(find.text('ARINA 360 • Нэгдсэн систем'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }
