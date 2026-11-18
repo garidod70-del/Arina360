@@ -35,8 +35,15 @@ def _club_or_404(db: Session, club_id: int) -> Club:
     return item
 
 
-def _can_manage_club(club: Club, user: User) -> bool:
-    return club.owner_id == user.id or _admin(user)
+def _can_manage_club(db: Session, club: Club, user: User) -> bool:
+    if club.owner_id == user.id or _admin(user):
+        return True
+    return db.query(ClubMembership.id).filter(
+        ClubMembership.club_id == club.id,
+        ClubMembership.user_id == user.id,
+        ClubMembership.role == "manager",
+        ClubMembership.status == "active",
+    ).first() is not None
 
 
 class ClubCreate(BaseModel):
@@ -164,7 +171,7 @@ def join_club(club_id: int, user: User = Depends(get_current_user), db: Session 
 @router.get("/clubs/{club_id}/members")
 def club_members(club_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     club = _club_or_404(db, club_id)
-    if not _can_manage_club(club, user):
+    if not _can_manage_club(db, club, user):
         raise HTTPException(status_code=403, detail="Зөвхөн клубын удирдлага гишүүдийг харна.")
     rows = db.query(ClubMembership).filter(ClubMembership.club_id == club.id).order_by(ClubMembership.created_at.desc()).all()
     return [{"id": x.id, "user_id": x.user_id, "role": x.role, "status": x.status, "created_at": x.created_at}
