@@ -30,7 +30,7 @@ Phone input is normalized for spaces, dashes and brackets. Password minimum is 8
 ## Production work still required
 
 This is a foundation, not a production launch. Before public use:
-- Add Alembic migrations; do not use AUTO_CREATE_TABLES in production.
+- Run and validate Alembic migrations during deployment; keep AUTO_CREATE_TABLES disabled in production.
 - Add rate limiting, SMS/OTP phone ownership verification, password reset and refresh-token/session revocation.
 - Add admin-controlled role grants and audit logs. Clients cannot assign privileged roles.
 - Set a unique random JWT_SECRET (32+ characters) and restrict CORS origins.
