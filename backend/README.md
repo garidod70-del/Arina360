@@ -39,3 +39,21 @@ This is a foundation, not a production launch. Before public use:
 - Verify payment-provider webhooks before recording payment success.
 
 The first registered account is only an athlete. Organizer, referee, coach, club and provider permissions must be granted through a trusted admin workflow.
+
+
+## QPay Merchant V2 integration
+
+Configure these server-side environment variables before enabling checkout:
+
+- `QPAY_BASE_URL`: sandbox `https://merchant-sandbox.qpay.mn` for testing; production `https://merchant.qpay.mn` after merchant activation.
+- `QPAY_CLIENT_ID`, `QPAY_CLIENT_SECRET`: QPay Merchant V2 API credentials.
+- `QPAY_INVOICE_CODE`: invoice code issued for the merchant.
+- `QPAY_CALLBACK_URL`: public HTTPS origin of this API (for example `https://api.example.mn`).
+
+Never place QPay credentials in Flutter, commit them to Git, or share them in chat. Use deployment secrets. Run Alembic migrations through revision `0011_order_payment_states` before deploying.
+
+The app creates invoices at `POST /api/v1/payments/qpay/invoice` for store orders, assigned referee bookings, approved venue bookings, accepted provider service requests, and paid club memberships. The API returns QPay QR/deeplink data. The callback and the authenticated `POST /api/v1/payments/qpay/invoices/{id}/check` endpoint both verify the invoice against QPay `POST /v2/payment/check` before settling the order and recording the 5% commission.
+
+QPay Merchant V2 officially documents sandbox/production hosts, Basic-auth token acquisition, Bearer-token API calls, invoice creation, and server-side payment checking. See https://developer.qpay.mn/mn/docs/merchant?version=2.0.0.
+
+The provider net amounts are currently recorded in the ARENA 360 settlement ledger. Actual automatic transfers to individual sellers/referees/clubs are not enabled by a standard single-merchant invoice; a separate payout/settlement arrangement with QPay/banks is required.
