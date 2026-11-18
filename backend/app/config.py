@@ -11,6 +11,11 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:3000"
     admin_bootstrap_key: str = ""
     payment_webhook_secret: str = ""
+    qpay_base_url: str = "https://merchant-sandbox.qpay.mn"
+    qpay_username: str = ""
+    qpay_password: str = ""
+    qpay_invoice_code: str = ""
+    qpay_callback_url: str = ""
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
