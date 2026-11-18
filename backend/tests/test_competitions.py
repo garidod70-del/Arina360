@@ -110,3 +110,47 @@ def test_tournament_permissions_and_draw_validation():
 
         too_early = client.post(f"/api/v1/competitions/{tournament_id}/draw", headers=owner_headers)
         assert too_early.status_code == 400
+
+
+def test_round_robin_generates_each_pair_once():
+    suffix = str(uuid.uuid4().int % 1000000).zfill(6)
+    with TestClient(app) as client:
+        organizer_headers = _register(client, "+97644" + suffix + "01")
+        athlete_headers = [
+            _register(client, "+97644" + suffix + f"{index:02d}")
+            for index in range(2, 6)
+        ]
+        starts_at = (datetime.now(timezone.utc) + timedelta(days=12)).isoformat()
+        created = client.post("/api/v1/competitions", headers=organizer_headers, json={
+            "title": "Тойргийн системийн тест",
+            "sport": "Волейбол",
+            "format": "round_robin",
+            "region": "Дархан",
+            "venue": "Төв заал",
+            "starts_at": starts_at,
+            "max_participants": 4,
+        })
+        assert created.status_code == 201
+        tournament_id = created.json()["id"]
+
+        for index, headers in enumerate(athlete_headers, start=1):
+            response = client.post(
+                f"/api/v1/competitions/{tournament_id}/register",
+                headers=headers,
+                json={
+                    "full_name": f"Тойргийн тамирчин {index}",
+                    "contact_phone": "+97633" + suffix + f"{index:02d}",
+                },
+            )
+            assert response.status_code == 201
+
+        draw = client.post(f"/api/v1/competitions/{tournament_id}/draw", headers=organizer_headers)
+        assert draw.status_code == 201
+        matches = draw.json()
+        assert len(matches) == 6
+        pairs = {
+            tuple(sorted((item["participant1_id"], item["participant2_id"])))
+            for item in matches
+        }
+        assert len(pairs) == 6
+        assert all(item["status"] == "scheduled" for item in matches)
