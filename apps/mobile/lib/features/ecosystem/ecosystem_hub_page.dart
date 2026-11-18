@@ -227,8 +227,19 @@ class ClubPage extends StatefulWidget {
 }
 class _ClubPageState extends _EcosystemState<ClubPage> {
   List<Map<String, dynamic>> clubs = [];
+  List<Map<String, dynamic>> mine = [];
+  List<Map<String, dynamic>> coaches = [];
   @override void initState() { super.initState(); refresh(); }
-  Future<void> refresh() async => work((t) async { clubs = await api.getList('/clubs', token: t); if (mounted) setState(() {}); });
+  Future<void> refresh() async => work((t) async {
+    clubs = await api.getList('/clubs', token: t);
+    mine = await api.getList('/clubs/mine', token: t);
+    coaches = await api.getList('/coaches', token: t);
+    if (mounted) setState(() {});
+  });
+  Future<void> manageClub(int id) async {
+    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => ClubMembersPage(clubId: id)));
+    await refresh();
+  }
   Future<void> createClub() async {
     final data = await form('Клуб үүсгэх', const [
       _Input('name', 'Клубын нэр'), _Input('sport', 'Спортын төрөл', initial: 'Жүдо'),
@@ -236,7 +247,12 @@ class _ClubPageState extends _EcosystemState<ClubPage> {
       _Input('contact_phone', 'Утас'),
     ]);
     if (data == null) return;
-    await work((t) async { await api.postAuthorized('/clubs', token: t, body: data); toast('Клубын бүртгэл үүслээ.'); });
+    await work((t) async {
+      await api.postAuthorized('/clubs', token: t, body: data);
+      mine = await api.getList('/clubs/mine', token: t);
+      if (mounted) setState(() {});
+      toast('Клубын бүртгэл үүслээ. Админ баталгаажуулалт хүлээнэ.');
+    });
   }
   Future<void> coach() async {
     final data = await form('Дасгалжуулагчийн профайл', const [
@@ -261,10 +277,24 @@ class _ClubPageState extends _EcosystemState<ClubPage> {
     ]),
     body: ListView(padding: const EdgeInsets.all(16), children: [
       status(),
+      const Text('БАТАЛГААЖСАН КЛУБУУД', style: TextStyle(fontWeight: FontWeight.w900)),
       ...clubs.map((x) => Card(child: ListTile(
         leading: const Icon(Icons.groups), title: Text(x['name'].toString()),
         subtitle: Text(x['sport'].toString() + ' • ' + x['region'].toString()),
-        trailing: TextButton(onPressed: () => join(x['id'] as int), child: const Text('ЭЛСЭХ')),
+        trailing: TextButton(onPressed: busy ? null : () => join(x['id'] as int), child: const Text('ЭЛСЭХ')),
+      ))),
+      const SizedBox(height: 12),
+      const Text('МИНИЙ КЛУБУУД', style: TextStyle(fontWeight: FontWeight.w900)),
+      ...mine.map((x) => Card(child: ListTile(
+        leading: const Icon(Icons.shield_outlined), title: Text(x['name'].toString()),
+        subtitle: Text('Төлөв: ' + x['verification_status'].toString()),
+        trailing: IconButton(onPressed: busy ? null : () => manageClub(x['id'] as int), icon: const Icon(Icons.manage_accounts)),
+      ))),
+      const SizedBox(height: 12),
+      const Text('БАТАЛГААЖСАН ДАСГАЛЖУУЛАГЧИД', style: TextStyle(fontWeight: FontWeight.w900)),
+      ...coaches.map((x) => Card(child: ListTile(
+        leading: const Icon(Icons.school), title: Text(x['sport'].toString()),
+        subtitle: Text(x['qualification'].toString() + ' • ' + x['experience_years'].toString() + ' жил'),
       ))),
     ]),
   );
@@ -415,6 +445,42 @@ class _ChatThreadPageState extends _EcosystemState<ChatThreadPage> {
         Expanded(child: TextField(controller: controller, decoration: const InputDecoration(hintText: 'Зурвас бичих'))),
         IconButton(onPressed: busy ? null : send, icon: const Icon(Icons.send)),
       ]))),
+    ]),
+  );
+}
+
+
+class ClubMembersPage extends StatefulWidget {
+  final int clubId;
+  const ClubMembersPage({super.key, required this.clubId});
+  @override State<ClubMembersPage> createState() => _ClubMembersPageState();
+}
+
+class _ClubMembersPageState extends _EcosystemState<ClubMembersPage> {
+  List<Map<String, dynamic>> members = [];
+  @override void initState() { super.initState(); refresh(); }
+  Future<void> refresh() async => work((t) async {
+    members = await api.getList('/clubs/' + widget.clubId.toString() + '/members', token: t);
+    if (mounted) setState(() {});
+  });
+  Future<void> decide(int id, bool accepted) async => work((t) async {
+    await api.postAuthorized('/clubs/' + widget.clubId.toString() + '/members/' + id.toString() + '/decision',
+      token: t, body: {'accepted': accepted});
+    members = await api.getList('/clubs/' + widget.clubId.toString() + '/members', token: t);
+    if (mounted) setState(() {});
+  });
+  @override Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Клубын гишүүд'), actions: [IconButton(onPressed: refresh, icon: const Icon(Icons.refresh))]),
+    body: ListView(padding: const EdgeInsets.all(16), children: [
+      status(),
+      ...members.map((x) => Card(child: ListTile(
+        title: Text('Хэрэглэгч #' + x['user_id'].toString()),
+        subtitle: Text(x['role'].toString() + ' • ' + x['status'].toString()),
+        trailing: x['status'] == 'pending' ? Wrap(children: [
+          IconButton(onPressed: busy ? null : () => decide(x['id'] as int, true), icon: const Icon(Icons.check, color: Colors.green)),
+          IconButton(onPressed: busy ? null : () => decide(x['id'] as int, false), icon: const Icon(Icons.close, color: Colors.red)),
+        ]) : null,
+      ))),
     ]),
   );
 }
