@@ -169,6 +169,8 @@ def decide_venue_booking(
     slot = db.query(VenueSlot).filter(VenueSlot.id == item.slot_id).first()
     if payload.accepted:
         item.status = "confirmed"
+        if slot and slot.price <= 0:
+            item.payment_status = "free"
         if slot:
             slot.status = "booked"
     else:
