@@ -52,6 +52,7 @@ class ClubCreate(BaseModel):
     region: str = Field(min_length=2, max_length=120)
     description: str = Field(default="", max_length=3000)
     contact_phone: str | None = Field(default=None, min_length=8, max_length=24)
+    membership_fee: int = Field(default=0, ge=0, le=2_000_000_000)
 
 
 class MembershipDecision(BaseModel):
@@ -81,7 +82,7 @@ class CartInput(BaseModel):
 
 class CheckoutInput(BaseModel):
     delivery_address: str = Field(min_length=5, max_length=300)
-    contact_phone: str = Field(min_length=8, max_length=24)
+    contact_phone: str | None = Field(default=None, min_length=8, max_length=24)
 
 
 class QrIssueInput(BaseModel):
@@ -115,7 +116,7 @@ def create_club(payload: ClubCreate, user: User = Depends(get_current_user), db:
     club = Club(
         owner_id=user.id, name=payload.name.strip(), sport=payload.sport.strip(),
         region=payload.region.strip(), description=payload.description.strip(),
-        contact_phone=payload.contact_phone, verification_status="pending",
+        contact_phone=payload.contact_phone, membership_fee=payload.membership_fee, verification_status="pending",
     )
     db.add(club)
     db.flush()
@@ -161,7 +162,7 @@ def join_club(club_id: int, user: User = Depends(get_current_user), db: Session 
     existing = db.query(ClubMembership).filter_by(club_id=club.id, user_id=user.id).first()
     if existing:
         raise HTTPException(status_code=409, detail="Та энэ клубт хүсэлт илгээсэн эсвэл гишүүн болсон байна.")
-    item = ClubMembership(club_id=club.id, user_id=user.id, role="athlete", status="pending")
+    item = ClubMembership(club_id=club.id, user_id=user.id, role="athlete",\n                          status="pending_payment" if club.membership_fee > 0 else "pending",\n                          payment_status="unpaid" if club.membership_fee > 0 else "free")
     db.add(item)
     _notify(db, club.owner_id, "Клубын шинэ хүсэлт", f"{user.phone} клубт элсэх хүсэлт илгээлээ.", "club")
     db.commit()
@@ -318,7 +319,7 @@ def checkout(payload: CheckoutInput, user: User = Depends(get_current_user), db:
     db.refresh(order)
     return {"id": order.id, "total_amount": order.total_amount, "status": order.status,
             "delivery_address": order.delivery_address, "created_at": order.created_at,
-            "payment_note": "Төлбөрийн онлайн интеграц одоогоор холбогдоогүй."}
+            "payment_note": "QPay төлбөрийн нэхэмжлэл үүсгэнэ.", "payment_status": order.payment_status}
 
 
 @router.get("/store/orders")
