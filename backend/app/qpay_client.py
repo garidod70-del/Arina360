@@ -74,6 +74,29 @@ def _post(path: str, payload: dict[str, Any]) -> dict[str, Any]:
     raise HTTPException(status_code=502, detail="QPay нэвтрэх эрхийг шинэчилж чадсангүй.")
 
 
+def refund_payment(payment_id: str) -> dict[str, Any]:
+    if not payment_id or len(payment_id) > 160:
+        raise HTTPException(status_code=422, detail="QPay гүйлгээний дугаар буруу байна.")
+    for attempt in range(2):
+        token = _request_token(force=attempt == 1)
+        try:
+            response = httpx.delete(
+                f"{_base_url()}/v2/payment/refund/{payment_id}",
+                headers={"Authorization": f"Bearer {token}"},
+                timeout=20.0,
+            )
+            if response.status_code in (401, 403) and attempt == 0:
+                continue
+            response.raise_for_status()
+            if not response.content:
+                return {}
+            data = response.json()
+            return data if isinstance(data, dict) else {}
+        except (httpx.HTTPError, ValueError) as exc:
+            raise HTTPException(status_code=502, detail="QPay буцаалтын хүсэлт амжилтгүй боллоо.") from exc
+    raise HTTPException(status_code=502, detail="QPay буцаалтын эрхийг шинэчилж чадсангүй.")
+
+
 def create_invoice(*, sender_invoice_no: str, description: str, amount: int, callback_url: str) -> dict[str, Any]:
     settings = get_settings()
     if not settings.qpay_invoice_code or not callback_url.startswith("https://"):
