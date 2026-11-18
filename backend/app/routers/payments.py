@@ -135,7 +135,9 @@ def _mark_order_paid(db: Session, invoice: QPayInvoice):
                 product = db.get(Product, line.product_id) if line.product_id else None
                 if product:
                     _notify(db, product.seller_id, "Төлбөр баталгаажсан захиалга",
-                            f"{line.product_title} × {line.quantity}. Захиалагч: {buyer.phone if buyer else order.contact_phone}. Захиалгын №{order.id}. Хүргэлт: {order.delivery_address}", "order")
+                            f"{line.product_title} × {line.quantity}. Нийт: {order.total_amount} ₮. "
+                            f"Захиалагч: {buyer.phone if buyer else order.contact_phone}. "
+                            f"Захиалгын №{order.id}. Хүргэлт: {order.delivery_address}", "order")
     elif invoice.order_type == "referee_booking":
         order = db.get(RefereeBooking, order_id)
         if order and order.payment_status != "paid":
