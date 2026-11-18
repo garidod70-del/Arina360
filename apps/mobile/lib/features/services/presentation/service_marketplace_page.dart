@@ -222,7 +222,9 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
     final savedSport = _profile['sport']?.toString() ?? '';
     final sport = TextEditingController(text: _sportOptions.contains(savedSport) ? savedSport : '');
     final region = TextEditingController(text: _profile['region']?.toString().isNotEmpty == true ? _profile['region'].toString() : _regionController.text.trim());
-    final phone = TextEditingController(text: _profile['phone']?.toString() ?? '');
+    final phone = TextEditingController(
+      text: _category == 'sports_store' ? '' : (_profile['phone']?.toString() ?? ''),
+    );
     final preferredDate = TextEditingController();
     final extraValues = {for (final label in _requestFields) label: TextEditingController()};
 
