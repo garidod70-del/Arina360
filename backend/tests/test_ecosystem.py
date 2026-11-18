@@ -46,6 +46,12 @@ def test_club_membership_and_coach_verification_workflow():
         assert created.status_code == 201
         club_id = created.json()["id"]
 
+        pending_join = client.post(f"/api/v1/clubs/{club_id}/join", headers=athlete)
+        assert pending_join.status_code == 409
+        club_verified = client.post(f"/api/v1/admin/clubs/{club_id}/verify", headers=admin,
+                                    json={"approved": True})
+        assert club_verified.status_code == 200
+
         joined = client.post(f"/api/v1/clubs/{club_id}/join", headers=athlete)
         assert joined.status_code == 201
         membership_id = joined.json()["id"]
@@ -66,10 +72,6 @@ def test_club_membership_and_coach_verification_workflow():
                                json={"approved": True, "note": "Баримт шалгасан"})
         assert verified.status_code == 200
         assert verified.json()["verification_status"] == "verified"
-
-        club_verified = client.post(f"/api/v1/admin/clubs/{club_id}/verify", headers=admin,
-                                    json={"approved": True})
-        assert club_verified.status_code == 200
         public = client.get("/api/v1/clubs")
         assert any(item["id"] == club_id for item in public.json())
         coaches = client.get("/api/v1/coaches", params={"sport": "Жүдо"})
