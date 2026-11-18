@@ -135,3 +135,38 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 }
+
+  testWidgets('ecosystem hub opens every public and admin module', (tester) async {
+    tester.view.physicalSize = const Size(1080, 1920);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      const MaterialApp(home: EcosystemHubPage(isAdmin: true)),
+    );
+    await tester.pump();
+
+    Future<void> openModule(String label, Type pageType) async {
+      final labelFinder = find.text(label);
+      await tester.ensureVisible(labelFinder);
+      await tester.tap(find.ancestor(
+        of: labelFinder,
+        matching: find.byType(InkWell),
+      ).first);
+      await tester.pump(const Duration(milliseconds: 600));
+      expect(find.byType(pageType), findsOneWidget, reason: '$label route should open');
+      expect(tester.takeException(), isNull);
+      await tester.pageBack();
+      await tester.pump(const Duration(milliseconds: 500));
+    }
+
+    await openModule('QR баталгаажуулалт', QrPassPage);
+    await openModule('Медаль, онооны хүснэгт', MedalBoardPage);
+    await openModule('Клуб, дасгалжуулагч', ClubPage);
+    await openModule('Спорт барааны дэлгүүр', StorePage);
+    await openModule('Мэдэгдэл, чат', MessageCentrePage);
+    await openModule('Миний орлого', ProviderEarningsPage);
+    await openModule('Админ аналитик', AnalyticsPage);
+  });
+
