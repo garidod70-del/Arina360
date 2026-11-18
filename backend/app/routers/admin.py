@@ -2,6 +2,7 @@ import hmac
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Header, HTTPException
+from sqlalchemy import text
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -49,6 +50,10 @@ def bootstrap_first_admin(
     expected = settings.admin_bootstrap_key
     if not expected or not x_admin_bootstrap_key or not hmac.compare_digest(expected, x_admin_bootstrap_key):
         raise HTTPException(status_code=403, detail="Админ үүсгэх түлхүүр буруу эсвэл тохируулаагүй.")
+    # Serialize first-admin creation on PostgreSQL so two simultaneous
+    # bootstrap requests cannot both pass the empty-admin check.
+    if db.get_bind().dialect.name == "postgresql":
+        db.execute(text("SELECT pg_advisory_xact_lock(36036001)"))
     if db.query(UserRole).filter(UserRole.role == "admin").first():
         raise HTTPException(status_code=409, detail="Админ эрх аль хэдийн үүссэн байна.")
     user = db.query(User).filter(User.phone == payload.phone).first()
