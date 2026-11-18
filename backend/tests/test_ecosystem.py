@@ -36,6 +36,7 @@ def test_club_membership_and_coach_verification_workflow():
     with TestClient(app) as client:
         owner, owner_id = register(client, "+97691" + suffix() + "01")
         athlete, _ = register(client, "+97691" + suffix() + "02")
+        manager, _ = register(client, "+97691" + suffix() + "04")
         admin, admin_id = register(client, "+97691" + suffix() + "03")
         grant_admin(admin_id)
 
@@ -62,6 +63,36 @@ def test_club_membership_and_coach_verification_workflow():
         )
         assert decision.status_code == 200
         assert decision.json()["status"] == "active"
+
+        manager_join = client.post(f"/api/v1/clubs/{club_id}/join", headers=manager)
+        assert manager_join.status_code == 201
+        manager_membership_id = manager_join.json()["id"]
+        manager_accepted = client.post(
+            f"/api/v1/clubs/{club_id}/members/{manager_membership_id}/decision",
+            headers=owner, json={"accepted": True},
+        )
+        assert manager_accepted.status_code == 200
+        promoted = client.post(
+            f"/api/v1/clubs/{club_id}/members/{manager_membership_id}/role",
+            headers=owner, json={"role": "manager"},
+        )
+        assert promoted.status_code == 200
+        assert client.get(f"/api/v1/clubs/{club_id}/members", headers=manager).status_code == 200
+        manager_update = client.patch(
+            f"/api/v1/clubs/{club_id}", headers=manager,
+            json={"description": "Менежерийн эрхийн шалгалт"},
+        )
+        assert manager_update.status_code == 200
+        denied_athlete_update = client.patch(
+            f"/api/v1/clubs/{club_id}", headers=athlete,
+            json={"description": "Эрхгүй өөрчлөлт"},
+        )
+        assert denied_athlete_update.status_code == 403
+        reverified = client.post(
+            f"/api/v1/admin/clubs/{club_id}/verify", headers=admin,
+            json={"approved": True},
+        )
+        assert reverified.status_code == 200
 
         coach = client.post("/api/v1/coaches/profile", headers=owner, json={
             "club_id": club_id, "sport": "Жүдо", "qualification": "Дасгалжуулагчийн үнэмлэх",
