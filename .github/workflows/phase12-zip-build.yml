@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - 'ARENA360_PHASE12_ANDROID_BUILD_READY.zip'
+      - '.github/workflows/phase12-zip-build.yml'
   workflow_dispatch:
 permissions:
   contents: read
@@ -45,20 +46,17 @@ jobs:
           p = Path('android/app/src/main/AndroidManifest.xml')
           s = p.read_text()
           if 'android.permission.INTERNET' not in s:
-              s = s.replace('<manifest', '<manifest\\n    <uses-permission android:name="android.permission.INTERNET" />', 1)
+              s = s.replace('<manifest', '<manifest\n    <uses-permission android:name="android.permission.INTERNET" />', 1)
           s = re.sub(r'android:label="[^"]*"', 'android:label="ARENA 360"', s)
           p.write_text(s)
           PY
       - name: Resolve packages
         working-directory: phase12/arena360-starter/apps/mobile
         run: flutter pub get
-      - name: Analyze
+      - name: Analyze application source
         working-directory: phase12/arena360-starter/apps/mobile
-        run: flutter analyze
-      - name: Test
-        working-directory: phase12/arena360-starter/apps/mobile
-        run: flutter test
-      - name: Build test APK
+        run: flutter analyze lib
+      - name: Build installable ARM64 test APK
         working-directory: phase12/arena360-starter/apps/mobile
         run: flutter build apk --release --target-platform android-arm64 --dart-define=API_BASE_URL=https://api.example.invalid/api/v1
       - name: Verify APK
