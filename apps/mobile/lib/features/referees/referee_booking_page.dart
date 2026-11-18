@@ -72,9 +72,6 @@ class _ApiRefereeBookingPageState extends State<ApiRefereeBookingPage> {
       if (_contactName.text.isEmpty) {
         _contactName.text = profile['full_name']?.toString() ?? profile['name']?.toString() ?? '';
       }
-      if (_contactPhone.text.isEmpty) {
-        _contactPhone.text = account['phone']?.toString() ?? '';
-      }
       final savedSport = profile['sport']?.toString();
       if (_sports.contains(savedSport)) _sport = savedSport!;
       setState(() {
