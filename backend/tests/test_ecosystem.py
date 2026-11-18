@@ -216,3 +216,79 @@ def test_medal_awards_leaderboard_and_admin_analytics():
         assert analytics.status_code == 200
         assert analytics.json()["medals"] >= 1
         assert analytics.json()["clubs"] >= 0
+
+def test_store_owner_permissions_and_cancelled_order_restores_stock():
+    with TestClient(app) as client:
+        seller, _ = register(client, "+97696" + suffix() + "01")
+        buyer, _ = register(client, "+97696" + suffix() + "02")
+        stranger, _ = register(client, "+97696" + suffix() + "03")
+
+        product = client.post("/api/v1/store/products", headers=seller, json={
+            "title": "Тестийн жүдогийн цүнх", "description": "Эзэмшлийн шалгалт",
+            "category": "Цүнх", "price": 42000, "stock": 5,
+        })
+        assert product.status_code == 201
+        product_id = product.json()["id"]
+
+        denied_edit = client.patch(f"/api/v1/store/products/{product_id}", headers=stranger, json={
+            "price": 1, "stock": 999,
+        })
+        assert denied_edit.status_code == 403
+
+        client.post("/api/v1/store/cart", headers=buyer, json={
+            "product_id": product_id, "quantity": 2,
+        })
+        checkout = client.post("/api/v1/store/checkout", headers=buyer, json={
+            "delivery_address": "Улаанбаатар хот, Сүхбаатар дүүрэг",
+            "contact_phone": "+97699112255",
+        })
+        assert checkout.status_code == 201
+        order_id = checkout.json()["id"]
+
+        denied_status = client.post(f"/api/v1/store/orders/{order_id}/status",
+                                    headers=stranger, json={"status": "confirmed"})
+        assert denied_status.status_code == 403
+
+        cancelled = client.post(f"/api/v1/store/orders/{order_id}/status",
+                                headers=seller, json={"status": "cancelled"})
+        assert cancelled.status_code == 200
+        assert cancelled.json()["status"] == "cancelled"
+
+        products = client.get("/api/v1/store/products")
+        stored = next(item for item in products.json() if item["id"] == product_id)
+        assert stored["stock"] == 5
+
+        repeated_cancel = client.post(f"/api/v1/store/orders/{order_id}/status",
+                                      headers=seller, json={"status": "cancelled"})
+        assert repeated_cancel.status_code == 409
+
+
+def test_notification_read_is_scoped_to_authenticated_user():
+    with TestClient(app) as client:
+        sender, _ = register(client, "+97697" + suffix() + "01")
+        recipient, _ = register(client, "+97697" + suffix() + "02")
+        stranger, _ = register(client, "+97697" + suffix() + "03")
+        recipient_id = client.get("/api/v1/auth/me", headers=recipient).json()["id"]
+
+        conversation = client.post("/api/v1/chat/conversations", headers=sender,
+                                   json={"other_user_id": recipient_id})
+        assert conversation.status_code == 201
+        sent = client.post(
+            f"/api/v1/chat/conversations/{conversation.json()['id']}/messages",
+            headers=sender, json={"body": "Эрхийн шалгалтын мэдэгдэл"},
+        )
+        assert sent.status_code == 201
+
+        notifications = client.get("/api/v1/notifications", headers=recipient)
+        notification_id = next(
+            item["id"] for item in notifications.json() if item["category"] == "chat"
+        )
+        denied = client.post(
+            f"/api/v1/notifications/{notification_id}/read", headers=stranger
+        )
+        assert denied.status_code == 404
+
+        allowed = client.post(
+            f"/api/v1/notifications/{notification_id}/read", headers=recipient
+        )
+        assert allowed.status_code == 200
