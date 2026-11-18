@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../core/network/api_client.dart';
 
 class EcosystemHubPage extends StatelessWidget {
@@ -136,6 +137,23 @@ class _QrPassPageState extends _EcosystemState<QrPassPage> {
       if (mounted) setState(() => code = result['token'].toString());
     });
   }
+  Future<void> scan() async {
+    final value = await Navigator.of(context).push<String>(
+      MaterialPageRoute(builder: (_) => Scaffold(
+        appBar: AppBar(title: const Text('QR уншуулах')),
+        body: MobileScanner(onDetect: (capture) {
+          final raw = capture.barcodes.firstOrNull?.rawValue;
+          if (raw != null && raw.isNotEmpty && Navigator.of(context).canPop()) {
+            Navigator.of(context).pop(raw);
+          }
+        }),
+      )),
+    );
+    if (value != null && mounted) {
+      verifyInput.text = value;
+      await verify();
+    }
+  }
   Future<void> verify() async {
     if (verifyInput.text.trim().isEmpty) return;
     await work((t) async {
@@ -157,6 +175,7 @@ class _QrPassPageState extends _EcosystemState<QrPassPage> {
       Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(children: [
         TextField(controller: verifyInput, decoration: const InputDecoration(labelText: 'QR токен оруулах')),
         const SizedBox(height: 8),
+        OutlinedButton.icon(onPressed: busy ? null : scan, icon: const Icon(Icons.camera_alt), label: const Text('КАМЕРААР УНШУУЛАХ')),
         OutlinedButton.icon(onPressed: busy ? null : verify, icon: const Icon(Icons.verified), label: const Text('БАТАЛГААЖУУЛАХ')),
         const Text('Камераар скан хийхийг дараагийн дэд шатанд холбоно.', style: TextStyle(fontSize: 11, color: Colors.blueGrey)),
       ]))),
