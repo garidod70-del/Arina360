@@ -15,8 +15,13 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
   static const _storage = FlutterSecureStorage();
   final _api = ApiClient();
   final _search = TextEditingController();
-  final _sport = TextEditingController();
   final _region = TextEditingController();
+  String _selectedSport = '';
+  static const _sportOptions = <String>[
+    'Жүдо', 'Самбо', 'Чөлөөт бөх', 'Үндэсний бөх', 'Бокс',
+    'Волейбол', 'Сагсан бөмбөг', 'Хөл бөмбөг', 'Таеквондо',
+    'Каратэ', 'Гимнастик', 'Бусад',
+  ];
   List<Map<String, dynamic>> _items = [];
   bool _loading = false;
   String? _error;
@@ -33,7 +38,6 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
   void dispose() {
     _api.close();
     _search.dispose();
-    _sport.dispose();
     _region.dispose();
     super.dispose();
   }
@@ -58,7 +62,7 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
     try {
       final query = <String, String>{};
       if (_search.text.trim().isNotEmpty) query['search'] = _search.text.trim();
-      if (_sport.text.trim().isNotEmpty) query['sport'] = _sport.text.trim();
+      if (_selectedSport.isNotEmpty) query['sport'] = _selectedSport;
       if (_region.text.trim().isNotEmpty) query['region'] = _region.text.trim();
       final suffix = query.entries
           .map((entry) => '${Uri.encodeQueryComponent(entry.key)}=${Uri.encodeQueryComponent(entry.value)}')
@@ -174,29 +178,51 @@ class _CompetitionsPageState extends State<CompetitionsPage> {
                 padding: const EdgeInsets.all(14),
                 child: Column(
                   children: [
-                    TextField(
-                      controller: _search,
-                      textInputAction: TextInputAction.search,
-                      onSubmitted: (_) => _load(),
+                    DropdownButtonFormField<String>(
+                      value: _selectedSport.isEmpty ? null : _selectedSport,
+                      isExpanded: true,
                       decoration: const InputDecoration(
-                        labelText: 'Тэмцээний нэрээр хайх',
-                        prefixIcon: Icon(Icons.search),
+                        labelText: 'Спортын төрлөө сонгоно уу',
+                        prefixIcon: Icon(Icons.sports),
                       ),
+                      items: [
+                        const DropdownMenuItem<String>(
+                          value: '',
+                          child: Text('Бүх спортын төрөл'),
+                        ),
+                        ..._sportOptions.map((sport) => DropdownMenuItem<String>(
+                          value: sport,
+                          child: Text(sport),
+                        )),
+                      ],
+                      onChanged: (value) {
+                        setState(() => _selectedSport = value ?? '');
+                        _load();
+                      },
                     ),
                     const SizedBox(height: 8),
-                    Row(
+                    ExpansionTile(
+                      tilePadding: EdgeInsets.zero,
+                      title: const Text('Нарийвчилсан хайлт'),
+                      leading: const Icon(Icons.tune),
                       children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _sport,
-                            decoration: const InputDecoration(labelText: 'Спортын төрөл'),
+                        TextField(
+                          controller: _search,
+                          textInputAction: TextInputAction.search,
+                          onSubmitted: (_) => _load(),
+                          decoration: const InputDecoration(
+                            labelText: 'Тэмцээний нэр (заавал биш)',
+                            prefixIcon: Icon(Icons.search),
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: TextField(
-                            controller: _region,
-                            decoration: const InputDecoration(labelText: 'Байршил'),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: _region,
+                          textInputAction: TextInputAction.search,
+                          onSubmitted: (_) => _load(),
+                          decoration: const InputDecoration(
+                            labelText: 'Байршил (заавал биш)',
+                            prefixIcon: Icon(Icons.location_on_outlined),
                           ),
                         ),
                       ],
