@@ -223,7 +223,7 @@ class _AdminServiceProvidersPageState extends State<AdminServiceProvidersPage> {
             if (_loading) const LinearProgressIndicator(),
             if (_error != null)
               Card(
-                color: const Color(0xFFFFF3E8),
+                color: const Color(0xFFF3ECFF),
                 child: Padding(
                   padding: const EdgeInsets.all(14),
                   child: Text(_error!),
