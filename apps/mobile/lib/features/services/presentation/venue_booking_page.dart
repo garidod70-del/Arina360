@@ -3,6 +3,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../../../core/config/api_config.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/widgets/qpay_payment_dialog.dart';
 
 class VenueBookingPage extends StatefulWidget {
   const VenueBookingPage({super.key});
@@ -116,6 +117,25 @@ class _VenueBookingPageState extends State<VenueBookingPage> {
     });
     phone.dispose();
     purpose.dispose();
+  }
+
+  Future<void> _payVenue(int bookingId) async {
+    final token = await _token();
+    if (token == null) return;
+    try {
+      await QPayPaymentDialog.open(
+        context: context, api: _api, token: token,
+        orderType: 'venue_booking', orderId: bookingId,
+        onPaid: () {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Заалын төлбөр баталгаажлаа.')));
+            _load();
+          }
+        },
+      );
+    } catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString())));
+    }
   }
 
   Future<void> _perform(String path, Map<String, dynamic> body) async {
@@ -362,10 +382,12 @@ class _VenueBookingPageState extends State<VenueBookingPage> {
             child: ListTile(
               leading: const Icon(Icons.event_available),
               title: Text('Захиалга #${booking['id']}'),
-              subtitle: Text(_status(booking['status']?.toString())),
-              trailing: booking['status'] == 'pending' || booking['status'] == 'confirmed'
-                  ? TextButton(onPressed: _saving ? null : () => _perform('/venues/bookings/${booking['id']}/cancel', {}), child: const Text('Цуцлах'))
-                  : null,
+              subtitle: Text('${_status(booking['status']?.toString())} • Төлбөр: ${booking['payment_status'] ?? 'unpaid'}'),
+              trailing: booking['status'] == 'confirmed' && booking['payment_status'] != 'paid'
+                  ? TextButton(onPressed: _saving ? null : () => _payVenue(booking['id'] as int), child: const Text('QPay төлөх'))
+                  : (booking['status'] == 'pending' || booking['status'] == 'confirmed'
+                      ? TextButton(onPressed: _saving ? null : () => _perform('/venues/bookings/${booking['id']}/cancel', {}), child: const Text('Цуцлах'))
+                      : null),
             ),
           )),
           const SizedBox(height: 14),
