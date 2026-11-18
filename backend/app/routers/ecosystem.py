@@ -448,13 +448,18 @@ def verify_qr_pass(payload: QrVerifyInput, user: User = Depends(get_current_user
         raise HTTPException(status_code=410, detail="QR кодын хугацаа дууссан байна.")
     if item.used_at is not None:
         raise HTTPException(status_code=409, detail="Энэ QR код өмнө нь ашиглагдсан байна.")
-    allowed = _admin(user) or user.id == item.issued_by
+    allowed = _admin(user)
     if item.reference_type == "competition":
         tournament = db.get(Tournament, item.reference_id)
         allowed = allowed or (tournament is not None and tournament.organizer_id == user.id)
-    if item.reference_type == "club":
+    elif item.reference_type == "club":
         club = db.get(Club, item.reference_id)
         allowed = allowed or (club is not None and _can_manage_club(db, club, user))
+    else:
+        # Generic passes (for example, a personal fitness entry) remain
+        # verifiable by the original issuer; resource-backed passes require
+        # the verifier to retain current management rights.
+        allowed = allowed or user.id == item.issued_by
     if not allowed:
         raise HTTPException(status_code=403, detail="Энэ QR кодыг баталгаажуулах эрхгүй.")
     # Claim the pass atomically. A read-then-write check alone can allow two
