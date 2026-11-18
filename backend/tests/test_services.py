@@ -110,6 +110,12 @@ def test_service_provider_verification_and_request_lifecycle():
         assert accepted.status_code == 200
         assert accepted.json()["status"] == "accepted"
 
+        with SessionLocal() as db:
+            from app.service_models import ServiceRequest
+            service_request = db.get(ServiceRequest, request_id)
+            service_request.payment_status = "paid"  # simulate a verified gateway settlement
+            db.commit()
+
         completed = client.post(
             f"/api/v1/services/requests/{request_id}/complete",
             headers=requester_headers,
