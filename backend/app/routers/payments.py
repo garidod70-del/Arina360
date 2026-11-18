@@ -473,6 +473,7 @@ def commission_admin_summary(
         "platform_commission_mnt": commission,
         "provider_net_after_refunds_mnt": provider_net,
         "transactions": len(rows),
+        "pending_invoices": db.query(QPayInvoice).filter(QPayInvoice.status == "pending").count(),
         "categories": categories,
     }
 
