@@ -431,7 +431,10 @@ class _StorePageState extends _EcosystemState<StorePage> {
     await work((t) async {
       final order = await api.postAuthorized('/store/checkout', token: t, body: data);
       await payOrder(order['id'] as int, tokenValue: t, refreshAfter: false);
-      await refresh();
+      products = await api.getList('/store/products', token: t);
+      cart = await api.get('/store/cart', token: t);
+      orders = await api.getList('/store/orders', token: t);
+      if (mounted) setState(() {});
     });
   }
   String _orderStatus(Map<String, dynamic> order) {
