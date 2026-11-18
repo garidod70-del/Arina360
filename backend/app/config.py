@@ -59,11 +59,17 @@ def validate_settings(settings: Settings) -> None:
 
     if settings.qpay_base_url.rstrip("/") != "https://merchant.qpay.mn":
         raise RuntimeError("Production QPay must use https://merchant.qpay.mn, not the sandbox.")
-    if not settings.qpay_client_id or not settings.qpay_client_secret or not settings.qpay_invoice_code:
+    if not settings.qpay_client_id.strip() or not settings.qpay_client_secret.strip() or not settings.qpay_invoice_code.strip():
         raise RuntimeError("Production QPay client ID, client secret and invoice code are required.")
     callback = urlsplit(settings.qpay_callback_url)
-    if callback.scheme != "https" or not callback.hostname:
-        raise RuntimeError("Production QPAY_CALLBACK_URL must be a public HTTPS API origin.")
+    if (
+        callback.scheme != "https"
+        or not callback.hostname
+        or callback.path not in ("", "/")
+        or callback.query
+        or callback.fragment
+    ):
+        raise RuntimeError("Production QPAY_CALLBACK_URL must be a public HTTPS API origin without a path or query.")
 
 
 @lru_cache
