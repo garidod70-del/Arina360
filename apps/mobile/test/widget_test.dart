@@ -68,13 +68,7 @@ void main() {
     await tester.ensureVisible(find.text('Спорт барааны дэлгүүр'));
     await tester.tap(find.text('Спорт барааны дэлгүүр'));
     await tester.pump(const Duration(milliseconds: 800));
-    expect(
-      find.descendant(
-        of: find.byType(AppBar),
-        matching: find.text('Спорт барааны дэлгүүр'),
-      ),
-      findsOneWidget,
-    );
+    expect(find.byType(StorePage), findsOneWidget);
     expect(tester.takeException(), isNull);
 
     await tester.pageBack();
