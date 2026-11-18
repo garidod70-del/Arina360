@@ -666,7 +666,7 @@ def update_membership_role(club_id: int, membership_id: int, payload: Membership
     return {"id": membership.id, "role": membership.role}
 
 
-@router.delete("/clubs/{club_id}/members/{membership_id}", status_code=204)
+@router.delete("/clubs/{club_id}/members/{membership_id}")
 def remove_club_member(club_id: int, membership_id: int,
                        user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     club = _club_or_404(db, club_id)
@@ -679,7 +679,7 @@ def remove_club_member(club_id: int, membership_id: int,
         raise HTTPException(status_code=409, detail="Клубын эзэмшигчийг устгах боломжгүй.")
     db.delete(membership)
     db.commit()
-    return None
+    return {"deleted": True}
 
 
 @router.get("/coaches/mine")
@@ -708,11 +708,11 @@ def update_product(product_id: int, payload: ProductUpdate,
             "stock": product.stock, "active": product.active}
 
 
-@router.delete("/store/cart/{product_id}", status_code=204)
+@router.delete("/store/cart/{product_id}")
 def remove_cart_item(product_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     item = db.query(CartItem).filter_by(user_id=user.id, product_id=product_id).first()
     if item is None:
         raise HTTPException(status_code=404, detail="Сагсны бараа олдсонгүй.")
     db.delete(item)
     db.commit()
-    return None
+    return {"deleted": True}
