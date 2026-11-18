@@ -526,12 +526,32 @@ class AnalyticsPage extends StatefulWidget {
 }
 class _AnalyticsPageState extends _EcosystemState<AnalyticsPage> {
   Map<String, dynamic> stats = {};
+  Map<String, dynamic> paymentStats = {};
   @override void initState() { super.initState(); refresh(); }
-  Future<void> refresh() async => work((t) async { stats = await api.get('/admin/analytics', token: t); if (mounted) setState(() {}); });
+  Future<void> refresh() async => work((t) async {
+    stats = await api.get('/admin/analytics', token: t);
+    paymentStats = await api.get('/payments/admin/summary', token: t);
+    if (mounted) setState(() {});
+  });
+  Widget _metric(String label, dynamic value) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4),
+    child: Row(children: [
+      Expanded(child: Text(label)),
+      Text((value ?? 0).toString() + ' ₮', style: const TextStyle(fontWeight: FontWeight.w800)),
+    ]),
+  );
   @override Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('Админ аналитик'), actions: [IconButton(onPressed: refresh, icon: const Icon(Icons.refresh))]),
     body: ListView(padding: const EdgeInsets.all(16), children: [
       status(),
+      Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text('ТӨЛБӨРИЙН ОРЛОГО • 5% ШИМТГЭЛ', style: TextStyle(fontWeight: FontWeight.w900)),
+        const SizedBox(height: 10),
+        _metric('Нийт төлөгдсөн', paymentStats['gross_paid_mnt']),
+        _metric('ARENA 360 шимтгэл', paymentStats['platform_commission_mnt']),
+        _metric('Үйлчилгээ үзүүлэгчид', paymentStats['provider_net_after_refunds_mnt']),
+        _metric('Буцаалт', paymentStats['refunded_mnt']),
+      ]))),
       ...stats.entries.map((x) => Card(child: ListTile(title: Text(x.key), trailing: Text(x.value.toString(), style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18))))),
     ]),
   );
