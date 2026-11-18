@@ -16,6 +16,11 @@ class _VenueBookingPageState extends State<VenueBookingPage> {
   final ApiClient _api = ApiClient();
   final _sport = TextEditingController(text: 'Жүдо');
   final _region = TextEditingController();
+  static const _sportOptions = <String>[
+    'Жүдо', 'Самбо', 'Чөлөөт бөх', 'Үндэсний бөх', 'Бокс',
+    'Волейбол', 'Сагсан бөмбөг', 'Хөл бөмбөг', 'Таеквондо',
+    'Каратэ', 'Гимнастик', 'Бусад',
+  ];
   DateTime _selectedDate = DateTime.now().add(const Duration(days: 1));
   List<Map<String, dynamic>> _slots = [];
   List<Map<String, dynamic>> _bookings = [];
@@ -270,9 +275,40 @@ class _VenueBookingPageState extends State<VenueBookingPage> {
                 if (picked != null) { setState(() => _selectedDate = picked); await _load(); }
               },
             ),
-            TextField(controller: _sport, decoration: const InputDecoration(labelText: 'Спортын төрөл', prefixIcon: Icon(Icons.sports))),
+            DropdownButtonFormField<String>(
+              value: _sportOptions.contains(_sport.text) ? _sport.text : 'Бусад',
+              isExpanded: true,
+              decoration: const InputDecoration(
+                labelText: 'Спортын төрлөө сонгоно уу',
+                prefixIcon: Icon(Icons.sports),
+              ),
+              items: _sportOptions.map((sport) => DropdownMenuItem<String>(
+                value: sport,
+                child: Text(sport),
+              )).toList(),
+              onChanged: (value) {
+                if (value == null) return;
+                setState(() => _sport.text = value);
+                _load();
+              },
+            ),
             const SizedBox(height: 10),
-            TextField(controller: _region, decoration: const InputDecoration(labelText: 'Байршил / дүүрэг', prefixIcon: Icon(Icons.location_on_outlined))),
+            ExpansionTile(
+              tilePadding: EdgeInsets.zero,
+              leading: const Icon(Icons.tune),
+              title: const Text('Байршлаар нарийвчлан шүүх'),
+              children: [
+                TextField(
+                  controller: _region,
+                  textInputAction: TextInputAction.search,
+                  onSubmitted: (_) => _load(),
+                  decoration: const InputDecoration(
+                    labelText: 'Аймаг / хот, дүүрэг',
+                    prefixIcon: Icon(Icons.location_on_outlined),
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 10),
             SizedBox(width: double.infinity, child: FilledButton.icon(onPressed: _loading ? null : _load, icon: const Icon(Icons.search), label: const Text('СУЛ ЦАГ ХАЙХ'))),
           ]))),
