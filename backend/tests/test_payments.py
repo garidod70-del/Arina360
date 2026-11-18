@@ -102,7 +102,7 @@ def test_qpay_store_checkout_uses_registered_phone_and_splits_five_percent(monke
         return {"Authorization": f"Bearer {response.json()['access_token']}"}
 
     with TestClient(app) as client:
-        suffix = uuid.uuid4().hex[:8]
+        suffix = str(uuid.uuid4().int % 100000000).zfill(8)
         buyer_phone = f"+97678{suffix}"
         buyer_headers = register(client, buyer_phone)
         seller_headers = register(client, f"+97679{suffix}")
