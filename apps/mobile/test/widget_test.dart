@@ -14,20 +14,6 @@ void main() {
     expect(find.text('SPORT • CONNECT • GROW'), findsOneWidget);
     expect(find.text('Нэвтрэх'), findsOneWidget);
   });
-}
-
-void main() {
-  testWidgets('ARINA 360 app displays the authentication screen', (tester) async {
-    await tester.pumpWidget(const Arena360App());
-    expect(
-      find.byWidgetPredicate(
-        (widget) => widget is RichText && widget.text.toPlainText() == 'ARINA 360',
-      ),
-      findsOneWidget,
-    );
-    expect(find.text('SPORT • CONNECT • GROW'), findsOneWidget);
-    expect(find.text('Нэвтрэх'), findsOneWidget);
-  });
 
   testWidgets('login does not enter a demo session without an API endpoint', (tester) async {
     await tester.view.setPhysicalSize(const Size(1080, 1920));
