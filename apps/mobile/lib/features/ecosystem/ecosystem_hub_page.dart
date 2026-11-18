@@ -391,12 +391,62 @@ class _StorePageState extends _EcosystemState<StorePage> {
   });
   Future<void> checkout() async {
     final data = await form(
-      'Захиалга үүсгэх',
-      const [_Input('delivery_address', 'Хүргэлтийн хаяг'), _Input('contact_phone', 'Утас')],
+      'Хүргэлтийн хаяг',
+      const [_Input('delivery_address', 'Хүргэлтийн хаяг')],
       autofillPhone: false,
     );
     if (data == null) return;
-    await work((t) async { await api.postAuthorized('/store/checkout', token: t, body: data); await refresh(); toast('Захиалга үүслээ. Онлайн төлбөр холбогдоогүй.'); });
+    await work((t) async {
+      final order = await api.postAuthorized('/store/checkout', token: t, body: data);
+      final invoice = await api.postAuthorized('/payments/qpay/invoice', token: t, body: {
+        'order_type': 'store_order',
+        'order_id': order['id'],
+      });
+      await refresh();
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => StatefulBuilder(
+          builder: (dialogContext, setDialog) => AlertDialog(
+            title: const Text('QPay төлбөр'),
+            content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Text('Захиалга #${order['id']} • ${invoice['amount']} ₮'),
+              const SizedBox(height: 12),
+              if ((invoice['qr_text'] ?? '').toString().isNotEmpty)
+                QrImageView(data: invoice['qr_text'].toString(), size: 220),
+              if ((invoice['short_url'] ?? '').toString().isNotEmpty)
+                SelectableText(invoice['short_url'].toString()),
+              const SizedBox(height: 8),
+              const Text('Банкны апп-аараа QR кодыг уншуулж төлнө үү.'),
+            ])),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('ХААХ')),
+              FilledButton(
+                onPressed: () async {
+                  try {
+                    final checked = await api.postAuthorized(
+                      '/payments/qpay/invoices/${invoice['id']}/check',
+                      token: t,
+                      body: const {},
+                    );
+                    if (checked['status'] == 'paid') {
+                      if (dialogContext.mounted) Navigator.pop(dialogContext);
+                      toast('Төлбөр баталгаажлаа. Дэлгүүрт мэдэгдэл илгээгдлээ.');
+                      await refresh();
+                    } else {
+                      toast('Төлбөр хараахан баталгаажаагүй байна.');
+                    }
+                  } catch (e) {
+                    toast(e.toString());
+                  }
+                },
+                child: const Text('ТӨЛБӨР ШАЛГАХ'),
+              ),
+            ],
+          ),
+        ),
+      );
+    });
   }
   @override Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('Спорт барааны дэлгүүр'), actions: [IconButton(onPressed: refresh, icon: const Icon(Icons.refresh))]),
