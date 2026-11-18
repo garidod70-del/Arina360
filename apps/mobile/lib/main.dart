@@ -367,7 +367,9 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _checkForUpdateNotice());
+    if (ApiConfig.isConfigured) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _checkForUpdateNotice());
+    }
   }
 
   Future<void> _checkForUpdateNotice() async {
