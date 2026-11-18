@@ -1,10 +1,8 @@
 import hashlib
 import hmac
 import json
-from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
-from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
