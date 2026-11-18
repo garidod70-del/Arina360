@@ -247,6 +247,13 @@ def respond_to_service_request(
         raise HTTPException(status_code=409, detail="Зөвхөн хүлээгдэж буй хүсэлтэд хариу өгнө.")
     item.status = "accepted" if payload.accepted else "rejected"
     item.response_note = payload.note
+    if payload.accepted:
+        provider = db.query(ServiceProvider).filter_by(
+            user_id=user.id, category=item.category, verification_status="verified"
+        ).first()
+        if provider is None:
+            raise HTTPException(status_code=409, detail="Баталгаажсан үйлчилгээ үзүүлэгчийн үнэ олдсонгүй.")
+        item.payment_status = "unpaid" if provider.price_from > 0 else "free"
     db.commit()
     db.refresh(item)
     return _request_output(item)
@@ -284,6 +291,8 @@ def complete_service_request(
         raise HTTPException(status_code=403, detail="Энэ хүсэлтийг дуусгах эрхгүй.")
     if item.status != "accepted":
         raise HTTPException(status_code=409, detail="Зөвхөн зөвшөөрсөн хүсэлтийг дуусгана.")
+    if item.payment_status not in {"paid", "free"}:
+        raise HTTPException(status_code=409, detail="Үйлчилгээний төлбөр баталгаажаагүй байна.")
     item.status = "completed"
     db.commit()
     db.refresh(item)
