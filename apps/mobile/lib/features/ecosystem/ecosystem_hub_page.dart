@@ -17,6 +17,7 @@ class EcosystemHubPage extends StatelessWidget {
       _HubItem('Клуб, дасгалжуулагч', Icons.groups, const ClubPage()),
       _HubItem('Спорт барааны дэлгүүр', Icons.shopping_bag, const StorePage()),
       _HubItem('Мэдэгдэл, чат', Icons.forum, const MessageCentrePage()),
+      _HubItem('Миний орлого', Icons.account_balance_wallet, const ProviderEarningsPage()),
       if (isAdmin) _HubItem('Админ аналитик', Icons.analytics, const AnalyticsPage()),
     ];
     return Scaffold(
@@ -643,6 +644,47 @@ class _ClubMembersPageState extends _EcosystemState<ClubMembersPage> {
           IconButton(onPressed: busy ? null : () => decide(x['id'] as int, false), icon: const Icon(Icons.close, color: Colors.red)),
         ]) : null,
       ))),
+    ]),
+  );
+}
+
+
+class ProviderEarningsPage extends StatefulWidget {
+  const ProviderEarningsPage({super.key});
+  @override State<ProviderEarningsPage> createState() => _ProviderEarningsPageState();
+}
+class _ProviderEarningsPageState extends _EcosystemState<ProviderEarningsPage> {
+  Map<String, dynamic> summary = {};
+  @override void initState() { super.initState(); refresh(); }
+  Future<void> refresh() async => work((t) async {
+    summary = await api.get('/payments/provider/summary', token: t);
+    if (mounted) setState(() {});
+  });
+  Widget _metric(String title, dynamic value) => ListTile(
+    dense: true,
+    title: Text(title),
+    trailing: Text('${value ?? 0} ₮', style: const TextStyle(fontWeight: FontWeight.w800)),
+  );
+  @override Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Миний үйлчилгээний орлого'), actions: [
+      IconButton(onPressed: busy ? null : refresh, icon: const Icon(Icons.refresh)),
+    ]),
+    body: ListView(padding: const EdgeInsets.all(16), children: [
+      status(),
+      Card(child: Padding(padding: const EdgeInsets.all(14), child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('ОРЛОГЫН ТАЙЛАН', style: TextStyle(fontWeight: FontWeight.w900)),
+          const SizedBox(height: 8),
+          _metric('Нийт төлөгдсөн захиалга', summary['gross_paid_mnt']),
+          _metric('ARENA 360 шимтгэл (5%)', summary['commission_deducted_mnt']),
+          _metric('Буцаалт', summary['refunds_mnt']),
+          const Divider(),
+          _metric('Танд ногдох цэвэр орлого', summary['net_after_commission_and_refunds_mnt']),
+          _metric('Гүйлгээний тоо', summary['transactions']),
+        ],
+      ))),
+      const Text('Тайлбар: Энэ тайлан нь QPay-ээр баталгаажсан гүйлгээ болон шимтгэлийн бүртгэлийг харуулна. Банкны данс руу бодитоор шилжүүлсэн төлбөрийн түүх биш.', style: TextStyle(fontSize: 12, color: Colors.blueGrey)),
     ]),
   );
 }
