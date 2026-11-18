@@ -241,7 +241,7 @@ class _VenueBookingPageState extends State<VenueBookingPage> {
           Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(colors: [Color(0xFF101B36), Color(0xFF244B91)]),
+              gradient: const LinearGradient(colors: [Color(0xFF211052), Color(0xFF3157B8)]),
               borderRadius: BorderRadius.circular(18),
             ),
             child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -293,7 +293,7 @@ class _VenueBookingPageState extends State<VenueBookingPage> {
               Text(slot['venue_address']?.toString() ?? ''),
               Text('${slot['sport']} • ${slot['start_time']}–${slot['end_time']}'),
               const SizedBox(height: 8),
-              Text(_price(slot['price']), style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF245FC7))),
+              Text(_price(slot['price']), style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF3478FF))),
               const SizedBox(height: 8),
               SizedBox(width: double.infinity, child: FilledButton(onPressed: _saving ? null : () => _book(slot), child: const Text('ЭНЭ ЦАГИЙГ ЗАХИАЛАХ'))),
             ])),
