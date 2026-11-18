@@ -65,12 +65,10 @@ void main() {
     expect(find.text('ARINA 360 • Нэгдсэн систем'), findsOneWidget);
     expect(tester.takeException(), isNull);
 
-    await tester.ensureVisible(find.text('Спорт барааны дэлгүүр'));
-    final storeTile = find.ancestor(
-      of: find.text('Спорт барааны дэлгүүр'),
-      matching: find.byType(InkWell),
-    ).first;
-    await tester.tap(storeTile);
+    final storeLabel = find.text('Спорт барааны дэлгүүр');
+    await tester.ensureVisible(storeLabel);
+    await tester.pumpAndSettle();
+    await tester.tap(storeLabel);
     await tester.pump(const Duration(milliseconds: 600));
     expect(find.byType(StorePage), findsOneWidget);
     expect(tester.takeException(), isNull);
@@ -150,10 +148,7 @@ void main() {
       final labelFinder = find.text(label);
       await tester.ensureVisible(labelFinder);
       await tester.pumpAndSettle();
-      await tester.tap(find.ancestor(
-        of: labelFinder,
-        matching: find.byType(InkWell),
-      ).first);
+      await tester.tap(labelFinder);
       await tester.pump(const Duration(milliseconds: 600));
       expect(find.byType(pageType), findsOneWidget, reason: '$label route should open');
       expect(tester.takeException(), isNull);
