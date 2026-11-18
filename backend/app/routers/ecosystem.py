@@ -162,7 +162,11 @@ def join_club(club_id: int, user: User = Depends(get_current_user), db: Session 
     existing = db.query(ClubMembership).filter_by(club_id=club.id, user_id=user.id).first()
     if existing:
         raise HTTPException(status_code=409, detail="Та энэ клубт хүсэлт илгээсэн эсвэл гишүүн болсон байна.")
-    item = ClubMembership(club_id=club.id, user_id=user.id, role="athlete",\n                          status="pending_payment" if club.membership_fee > 0 else "pending",\n                          payment_status="unpaid" if club.membership_fee > 0 else "free")
+    item = ClubMembership(
+        club_id=club.id, user_id=user.id, role="athlete",
+        status="pending_payment" if club.membership_fee > 0 else "pending",
+        payment_status="unpaid" if club.membership_fee > 0 else "free",
+    )
     db.add(item)
     _notify(db, club.owner_id, "Клубын шинэ хүсэлт", f"{user.phone} клубт элсэх хүсэлт илгээлээ.", "club")
     db.commit()
@@ -305,8 +309,11 @@ def checkout(payload: CheckoutInput, user: User = Depends(get_current_user), db:
             raise HTTPException(status_code=409, detail="Сагсан дахь барааны үлдэгдэл өөрчлөгдсөн байна.")
         locked.append((row, product))
         total += product.price * row.quantity
+    registered_phone = (user.phone or "").strip()
+    if len(registered_phone) < 8:
+        raise HTTPException(status_code=422, detail="Захиалга хийхийн өмнө профайлдаа утасны дугаараа баталгаажуулна уу.")
     order = ShopOrder(user_id=user.id, total_amount=total, delivery_address=payload.delivery_address.strip(),
-                      contact_phone=payload.contact_phone.strip(), status="pending_payment")
+                      contact_phone=registered_phone, status="pending_payment")
     db.add(order)
     db.flush()
     for row, product in locked:
@@ -314,7 +321,6 @@ def checkout(payload: CheckoutInput, user: User = Depends(get_current_user), db:
                              unit_price=product.price, quantity=row.quantity))
         product.stock -= row.quantity
         db.delete(row)
-        _notify(db, product.seller_id, "Шинэ захиалга", f"{product.title} бараанд шинэ захиалга үүслээ.", "order")
     db.commit()
     db.refresh(order)
     return {"id": order.id, "total_amount": order.total_amount, "status": order.status,
