@@ -6,7 +6,7 @@ from sqlalchemy import text
 
 from app.config import get_settings
 from app.database import Base, engine
-from app import models, referee_models, service_models, venue_models, tournament_models  # noqa: F401
+from app import models, referee_models, service_models, venue_models, tournament_models, ecosystem_models  # noqa: F401
 from app.routers.auth import router as auth_router
 from app.routers.profile import router as profile_router
 from app.routers.referees import router as referees_router
@@ -14,6 +14,7 @@ from app.routers.admin import router as admin_router
 from app.routers.services import router as services_router
 from app.routers.venues import router as venues_router
 from app.routers.competitions import router as competitions_router
+from app.routers.ecosystem import router as ecosystem_router
 
 settings = get_settings()
 
@@ -27,7 +28,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="ARENA 360 API",
-    version="0.5.0",
+    version="0.6.0",
     description="Нэгдсэн спортын үйлчилгээний API",
     lifespan=lifespan,
 )
@@ -45,6 +46,7 @@ app.include_router(admin_router, prefix="/api/v1")
 app.include_router(services_router, prefix="/api/v1")
 app.include_router(venues_router, prefix="/api/v1")
 app.include_router(competitions_router, prefix="/api/v1")
+app.include_router(ecosystem_router, prefix="/api/v1")
 
 
 @app.get("/health", tags=["system"])
