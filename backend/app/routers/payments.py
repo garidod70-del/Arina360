@@ -174,11 +174,22 @@ def create_qpay_invoice(
     db: Session = Depends(get_db),
 ):
     order_data = _order_for_payment(db, user, payload.order_type, payload.order_id)
+    pending = db.query(QPayInvoice).filter_by(
+        user_id=user.id, order_type=payload.order_type, order_id=str(payload.order_id), status="pending"
+    ).order_by(QPayInvoice.created_at.desc()).first()
+    if pending:
+        return {
+            "id": pending.id, "provider": "qpay", "status": pending.status,
+            "amount": pending.amount, "currency": pending.currency,
+            "invoice_id": pending.qpay_invoice_id, "qr_text": pending.qr_text,
+            "qr_image": pending.qr_image, "short_url": pending.short_url,
+            "bank_links": json.loads(pending.bank_links_json or "[]"),
+        }
     sender_no = f"AR360-{uuid4().hex}"
     settings = get_settings()
     callback_base = settings.qpay_callback_url.rstrip("/")
     if not callback_base.startswith("https://"):
-        raise HTTPException(status_code=503, detail="QP AY_CALLBACK_URL-г HTTPS хаягаар тохируулна уу.")
+        raise HTTPException(status_code=503, detail="QPAY_CALLBACK_URL-г HTTPS хаягаар тохируулна уу.")
     callback_url = f"{callback_base}/api/v1/payments/qpay/callback/{sender_no}"
     result = create_invoice(
         sender_invoice_no=sender_no,
