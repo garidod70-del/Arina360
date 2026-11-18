@@ -31,8 +31,18 @@ class QPayPaymentDialog {
                 QrImageView(data: invoice['qr_text'].toString(), size: 220),
               if ((invoice['short_url'] ?? '').toString().isNotEmpty)
                 SelectableText(invoice['short_url'].toString()),
+              ...((invoice['bank_links'] as List? ?? []).whereType<Map>().map((bank) => Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.account_balance),
+                  title: Text((bank['name'] ?? bank['description'] ?? 'Банкны апп').toString()),
+                  subtitle: SelectableText((bank['link'] ?? '').toString()),
+                ),
+              ))),
               const SizedBox(height: 8),
-              const Text('Банкны апп-аараа QR кодыг уншуулж төлнө үү.'),
+              const Text('Банкны апп-аараа QR кодыг уншуулах эсвэл дээрх холбоосыг хуулж нээнэ үү.'),
             ]),
           ),
           actions: [
