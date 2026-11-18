@@ -681,7 +681,7 @@ class _ProviderEarningsPageState extends _EcosystemState<ProviderEarningsPage> {
           _metric('Буцаалт', summary['refunds_mnt']),
           const Divider(),
           _metric('Танд ногдох цэвэр орлого', summary['net_after_commission_and_refunds_mnt']),
-          _metric('Гүйлгээний тоо', summary['transactions']),
+          ListTile(dense: true, title: const Text('Гүйлгээний тоо'), trailing: Text((summary['transactions'] ?? 0).toString(), style: const TextStyle(fontWeight: FontWeight.w800))),
         ],
       ))),
       const Text('Тайлбар: Энэ тайлан нь QPay-ээр баталгаажсан гүйлгээ болон шимтгэлийн бүртгэлийг харуулна. Банкны данс руу бодитоор шилжүүлсэн төлбөрийн түүх биш.', style: TextStyle(fontSize: 12, color: Colors.blueGrey)),
