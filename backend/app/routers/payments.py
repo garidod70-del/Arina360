@@ -466,6 +466,15 @@ def commission_admin_summary(
         item["commission"] += p.commission_amount - p.refunded_commission
         item["provider_net"] += p.provider_net_amount - (p.refunded_amount - p.refunded_commission)
         item["refund"] += p.refunded_amount
+    pending_orders = {
+        "sports_store": db.query(ShopOrder).filter_by(payment_status="unpaid", status="pending_payment").count(),
+        "referee": db.query(RefereeBooking).filter(
+            RefereeBooking.payment_status == "unpaid", RefereeBooking.status.in_(["assigned", "accepted"])
+        ).count(),
+        "venue_booking": db.query(VenueBooking).filter_by(payment_status="unpaid", status="confirmed").count(),
+        "services": db.query(ServiceRequest).filter_by(payment_status="unpaid", status="accepted").count(),
+        "club_membership": db.query(ClubMembership).filter_by(payment_status="unpaid", status="pending_payment").count(),
+    }
     return {
         "commission_rate_percent": 5,
         "gross_paid_mnt": paid,
@@ -474,6 +483,8 @@ def commission_admin_summary(
         "provider_net_after_refunds_mnt": provider_net,
         "transactions": len(rows),
         "pending_invoices": db.query(QPayInvoice).filter(QPayInvoice.status == "pending").count(),
+        "pending_orders": pending_orders,
+        "pending_orders_total": sum(pending_orders.values()),
         "categories": categories,
     }
 
