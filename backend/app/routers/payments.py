@@ -1,6 +1,7 @@
 import hashlib
 import hmac
 import json
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from sqlalchemy.orm import Session
@@ -9,7 +10,7 @@ from app.config import get_settings
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models import User
-from app.payment_models import PaymentTransaction
+from app.payment_models import PaymentAllocation, PaymentTransaction
 from app.payment_service import record_payment, record_refund
 
 router = APIRouter(prefix="/payments", tags=["payments"])
