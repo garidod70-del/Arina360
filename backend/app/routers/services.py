@@ -199,6 +199,16 @@ def create_service_request(
             raise HTTPException(status_code=404, detail="Баталгаажсан үйлчилгээ үзүүлэгч олдсонгүй.")
         if provider.user_id == user.id:
             raise HTTPException(status_code=400, detail="Өөрийн үйлчилгээ рүү хүсэлт илгээх боломжгүй.")
+    contact_phone = (
+        (user.phone or "").strip()
+        if payload.category == "sports_store"
+        else (payload.contact_phone or "").strip()
+    )
+    if len(contact_phone) < 8:
+        raise HTTPException(
+            status_code=422,
+            detail="Профайлдаа бүртгэлтэй утасны дугаараа баталгаажуулна уу.",
+        )
     item = ServiceRequest(
         requester_id=user.id,
         provider_user_id=provider.user_id if provider else None,
@@ -208,7 +218,7 @@ def create_service_request(
         sport=payload.sport,
         region=payload.region,
         preferred_at=payload.preferred_at,
-        contact_phone=payload.contact_phone,
+        contact_phone=contact_phone,
         status="pending",
     )
     db.add(item)
