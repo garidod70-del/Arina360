@@ -87,6 +87,22 @@ def _stage_name(round_number: int, total_rounds: int) -> str:
     return labels.get(remaining, f"{round_number}-р тойрог")
 
 
+def _seeded_bracket_slots(participants: list[TournamentParticipant], bracket_size: int):
+    # Standard seeded placement: 1 vs lowest seed, 2 vs next-lowest, etc.
+    positions = [1, 2]
+    while len(positions) < bracket_size:
+        next_size = len(positions) * 2
+        positions = [
+            seed
+            for position in positions
+            for seed in (position, next_size + 1 - position)
+        ]
+    return [
+        participants[seed - 1] if seed <= len(participants) else None
+        for seed in positions
+    ]
+
+
 @router.get("", response_model=list[TournamentOutput])
 def list_competitions(
     sport: str | None = Query(default=None, max_length=80),
@@ -162,7 +178,9 @@ def register_participant(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    tournament = _get_tournament_or_404(db, tournament_id)
+    tournament = db.query(Tournament).filter(Tournament.id == tournament_id).with_for_update().first()
+    if tournament is None:
+        raise HTTPException(status_code=404, detail="Тэмцээн олдсонгүй.")
     if tournament.status != "registration_open":
         raise HTTPException(status_code=409, detail="Энэ тэмцээний бүртгэл хаагдсан байна.")
     now = datetime.now(timezone.utc)
@@ -184,6 +202,13 @@ def register_participant(
     ).first()
     if existing:
         raise HTTPException(status_code=409, detail="Энэ утасны дугаараар оролцогч бүртгэгдсэн байна.")
+    if payload.seed > 0:
+        seed_exists = db.query(TournamentParticipant).filter(
+            TournamentParticipant.tournament_id == tournament.id,
+            TournamentParticipant.seed == payload.seed,
+        ).first()
+        if seed_exists:
+            raise HTTPException(status_code=409, detail="Энэ суулгалтын эрэмбэ өөр тамирчинд олгогдсон байна.")
     item = TournamentParticipant(
         tournament_id=tournament.id, user_id=user.id, full_name=payload.full_name,
         club_name=payload.club_name, contact_phone=payload.contact_phone, seed=payload.seed,
@@ -287,10 +312,11 @@ def generate_draw(
                 round_matches.append(match)
             rounds.append(round_matches)
         db.flush()
+        bracket_slots = _seeded_bracket_slots(participants, bracket_size)
         for index, match in enumerate(rounds[0]):
             first_index = index * 2
-            first = participants[first_index] if first_index < len(participants) else None
-            second = participants[first_index + 1] if first_index + 1 < len(participants) else None
+            first = bracket_slots[first_index]
+            second = bracket_slots[first_index + 1]
             match.participant1_id = first.id if first else None
             match.participant2_id = second.id if second else None
             if first is not None and second is None:
