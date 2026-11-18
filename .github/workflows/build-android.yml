@@ -2,6 +2,8 @@ name: ARENA 360 Android APK
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
@@ -23,17 +25,24 @@ jobs:
         run: flutter create --platforms=android --project-name arena360 --org mn.arena360 .
       - name: Add Internet permission
         working-directory: apps/mobile
-        run: sed -i '/<application/i\    <uses-permission android:name="android.permission.INTERNET" />' android/app/src/main/AndroidManifest.xml
+        run: sed -i '/<application/i\\    <uses-permission android:name="android.permission.INTERNET" />' android/app/src/main/AndroidManifest.xml
       - name: Install packages
         working-directory: apps/mobile
         run: flutter pub get
       - name: Analyze source
         working-directory: apps/mobile
-        run: flutter analyze
-        continue-on-error: true
+        run: flutter analyze lib --no-fatal-infos --no-fatal-warnings
       - name: Build release APK
         working-directory: apps/mobile
-        run: flutter build apk --release
+        env:
+          ARENA_API_BASE_URL: ${{ vars.ARENA_API_BASE_URL }}
+        run: flutter build apk --release --dart-define=ARENA_API_BASE_URL="$ARENA_API_BASE_URL"
+      - name: Verify APK
+        working-directory: apps/mobile
+        run: |
+          APK=build/app/outputs/flutter-apk/app-release.apk
+          test -s "$APK"
+          unzip -t "$APK"
       - uses: actions/upload-artifact@v4
         with:
           name: ARENA360-Android-APK
