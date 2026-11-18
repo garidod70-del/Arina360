@@ -101,7 +101,12 @@ def create_request(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    item = RefereeBooking(requester_id=user.id, **payload.model_dump(), status="pending")
+    multiplier = payload.work_days if payload.payment_type == "Нэг өдрөөр" else 1
+    amount = payload.referee_count * payload.unit_fee * multiplier + payload.transport_fee + payload.food_fee
+    item = RefereeBooking(
+        requester_id=user.id, **payload.model_dump(), status="pending",
+        payment_status="unpaid" if amount > 0 else "free",
+    )
     db.add(item)
     db.commit()
     db.refresh(item)
