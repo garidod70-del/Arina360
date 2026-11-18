@@ -53,12 +53,11 @@ class ParticipantCreate(BaseModel):
 
 
 class ParticipantOutput(BaseModel):
+    # Public participant responses intentionally exclude account IDs and phone numbers.
     id: int
     tournament_id: int
-    user_id: int | None
     full_name: str
     club_name: str | None
-    contact_phone: str
     seed: int
     status: str
     created_at: datetime
