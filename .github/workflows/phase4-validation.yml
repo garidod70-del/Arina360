@@ -57,6 +57,7 @@ jobs:
         working-directory: apps/mobile
         run: |
           grep -q 'android.permission.INTERNET' android/app/src/main/AndroidManifest.xml || sed -i '/<application/i\    <uses-permission android:name="android.permission.INTERNET" />' android/app/src/main/AndroidManifest.xml
+          grep -q 'android.permission.CAMERA' android/app/src/main/AndroidManifest.xml || sed -i '/<application/i\    <uses-permission android:name="android.permission.CAMERA" />' android/app/src/main/AndroidManifest.xml
       - name: Install Flutter dependencies
         working-directory: apps/mobile
         run: flutter pub get
