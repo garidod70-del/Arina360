@@ -168,6 +168,8 @@ def complete_assignment(
         raise HTTPException(status_code=403, detail="Энэ захиалгыг дуусгах эрхгүй.")
     if item.status != "accepted":
         raise HTTPException(status_code=409, detail="Зөвхөн зөвшөөрсөн томилгоог дуусгана.")
+    if item.payment_status not in {"paid", "free"}:
+        raise HTTPException(status_code=409, detail="Шүүгчийн үйлчилгээний төлбөр баталгаажаагүй байна.")
     item.status = "completed"
     db.commit()
     db.refresh(item)
