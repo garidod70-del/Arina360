@@ -1,0 +1,95 @@
+name: ARENA 360 Phase 12 APK
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'ARENA360_PHASE12_ANDROID_BUILD_READY.zip'
+      - '.github/workflows/phase12-zip-build.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: arena360-phase12-apk
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Unpack Phase 12 source
+        run: |
+          test -s ARENA360_PHASE12_ANDROID_BUILD_READY.zip
+          unzip -q ARENA360_PHASE12_ANDROID_BUILD_READY.zip -d phase12
+          test -f phase12/arena360-starter/apps/mobile/pubspec.yaml
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.5'
+          channel: stable
+          cache: true
+      - name: Generate Android project
+        working-directory: phase12/arena360-starter/apps/mobile
+        run: flutter create --platforms=android --project-name arena360 --org mn.arena360 .
+      - name: Configure Android app
+        working-directory: phase12/arena360-starter/apps/mobile
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('android/app/src/main/AndroidManifest.xml')
+          s=p.read_text()
+          if 'android.permission.INTERNET' not in s:
+              s=re.sub(r'(<manifest[^>]*>)', r'\\1\\n    <uses-permission android:name="android.permission.INTERNET" />', s, count=1)
+          s=re.sub(r'<application\\b([^>]*)>', lambda m: '<application'+re.sub(r'android:label="[^"]*"','',m.group(1))+' android:label="ARENA 360">', s, count=1)
+          p.write_text(s)
+          g=Path('android/app/build.gradle')
+          if g.exists():
+              t=g.read_text()
+              if 'applicationId' not in t:
+                  t=t.replace('defaultConfig {','defaultConfig {\\n        applicationId "mn.arena360.arena360"',1)
+              g.write_text(t)
+          else:
+              g=Path('android/app/build.gradle.kts')
+              t=g.read_text()
+              if 'applicationId' not in t:
+                  t=t.replace('defaultConfig {','defaultConfig {\\n        applicationId = "mn.arena360.arena360"',1)
+              g.write_text(t)
+          PY
+      - name: Resolve packages
+        working-directory: phase12/arena360-starter/apps/mobile
+        run: flutter pub get
+      - name: Analyze
+        working-directory: phase12/arena360-starter/apps/mobile
+        run: flutter analyze
+      - name: Test
+        working-directory: phase12/arena360-starter/apps/mobile
+        run: flutter test
+      - name: Build test APK
+        working-directory: phase12/arena360-starter/apps/mobile
+        run: flutter build apk --release --target-platform android-arm64 --dart-define=API_BASE_URL=https://api.example.invalid/api/v1
+      - name: Verify APK
+        working-directory: phase12/arena360-starter/apps/mobile
+        run: |
+          set -euo pipefail
+          APK=build/app/outputs/flutter-apk/app-release.apk
+          test -s "$APK"
+          unzip -t "$APK"
+          find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1 | xargs -r -I{} {} verify --verbose "$APK"
+          sha256sum "$APK" | tee build/app/outputs/flutter-apk/apk-sha256.txt
+      - name: Upload installable APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ARENA360-PHASE12-TEST-APK
+          path: |
+            phase12/arena360-starter/apps/mobile/build/app/outputs/flutter-apk/app-release.apk
+            phase12/arena360-starter/apps/mobile/build/app/outputs/flutter-apk/apk-sha256.txt
+          if-no-files-found: error
+          retention-days: 30
