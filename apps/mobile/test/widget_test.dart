@@ -64,6 +64,30 @@ void main() {
     expect(find.text('ARINA 360 • Нэгдсэн систем'), findsOneWidget);
     expect(tester.takeException(), isNull);
 
+    await tester.tap(find.text('Спорт барааны дэлгүүр'));
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(
+        of: find.byType(AppBar),
+        matching: find.text('Спорт барааны дэлгүүр'),
+      ),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Мэдэгдэл, чат'));
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(
+        of: find.byType(AppBar),
+        matching: find.text('Мэдэгдэл, чат'),
+      ),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+
     await tester.pageBack();
     await tester.pumpAndSettle();
     await tester.drag(find.byType(ListView).first, const Offset(0, -700));
