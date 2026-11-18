@@ -125,7 +125,7 @@ def create_club(payload: ClubCreate, user: User = Depends(get_current_user), db:
     db.refresh(club)
     return {"id": club.id, "name": club.name, "sport": club.sport, "region": club.region,
             "description": club.description, "owner_id": club.owner_id,
-            "verification_status": club.verification_status, "created_at": club.created_at}
+            "verification_status": club.verification_status, "membership_fee": club.membership_fee, "created_at": club.created_at}
 
 
 @router.get("/clubs")
@@ -143,7 +143,7 @@ def list_clubs(
     if search:
         query = query.filter(Club.name.ilike(f"%{search.strip()}%"))
     return [{"id": x.id, "name": x.name, "sport": x.sport, "region": x.region,
-             "description": x.description, "verification_status": x.verification_status}
+             "description": x.description, "verification_status": x.verification_status, "membership_fee": x.membership_fee}
             for x in query.order_by(Club.name).limit(200).all()]
 
 
@@ -151,7 +151,7 @@ def list_clubs(
 def my_clubs(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     rows = db.query(Club).filter(Club.owner_id == user.id).order_by(Club.created_at.desc()).all()
     return [{"id": x.id, "name": x.name, "sport": x.sport, "region": x.region,
-             "verification_status": x.verification_status} for x in rows]
+             "verification_status": x.verification_status, "membership_fee": x.membership_fee} for x in rows]
 
 
 @router.post("/clubs/{club_id}/join", status_code=201)
