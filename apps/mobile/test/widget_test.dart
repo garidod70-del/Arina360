@@ -4,11 +4,11 @@ import 'package:arena360/main.dart';
 import 'package:arena360/features/ecosystem/ecosystem_hub_page.dart';
 
 void main() {
-  testWidgets('ARINA 360 app displays the authentication screen', (tester) async {
+  testWidgets('ARENA 360 app displays the authentication screen', (tester) async {
     await tester.pumpWidget(const Arena360App());
     expect(
       find.byWidgetPredicate(
-        (widget) => widget is RichText && widget.text.toPlainText() == 'ARINA 360',
+        (widget) => widget is RichText && widget.text.toPlainText() == 'ARENA 360',
       ),
       findsOneWidget,
     );
@@ -63,7 +63,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(EcosystemHubPage), findsOneWidget);
-    expect(find.text('ARINA 360 • Нэгдсэн систем'), findsOneWidget);
+    expect(find.text('ARENA 360 • Нэгдсэн систем'), findsOneWidget);
     expect(find.text('QR баталгаажуулалт'), findsOneWidget);
     expect(find.text('Медаль, онооны хүснэгт'), findsOneWidget);
     expect(find.text('Клуб, дасгалжуулагч'), findsOneWidget);
