@@ -63,8 +63,18 @@ class _ApiRefereeBookingPageState extends State<ApiRefereeBookingPage> {
       final results = await Future.wait([
         _api.getList('/referees/requests/me', token: token),
         _api.getList('/referees', token: token),
+        _api.get('/profile/me', token: token),
       ]);
       if (!mounted) return;
+      final profile = results[2] as Map<String, dynamic>;
+      if (_contactName.text.isEmpty) {
+        _contactName.text = profile['full_name']?.toString() ?? profile['name']?.toString() ?? '';
+      }
+      if (_contactPhone.text.isEmpty) {
+        _contactPhone.text = profile['phone']?.toString() ?? '';
+      }
+      final savedSport = profile['sport']?.toString();
+      if (_sports.contains(savedSport)) _sport = savedSport!;
       setState(() {
         _requests = results[0];
         _referees = results[1];
