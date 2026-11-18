@@ -72,7 +72,7 @@ jobs:
         run: flutter build apk --debug --target-platform android-x64
       - name: Install and launch on Android 14 emulator
         continue-on-error: true
-        timeout-minutes: 5
+        timeout-minutes: 12
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
@@ -82,7 +82,7 @@ jobs:
           disable-animations: true
           script: |
             adb install apps/mobile/build/app/outputs/flutter-apk/app-debug.apk
-            adb shell monkey -p mn.arena360.arena360 1
+            adb shell am start -n mn.arena360.arena360/.MainActivity
             sleep 5
             test -n "$(adb shell pidof mn.arena360.arena360)"
             if adb logcat -d -s AndroidRuntime:E | grep -q "FATAL EXCEPTION"; then
