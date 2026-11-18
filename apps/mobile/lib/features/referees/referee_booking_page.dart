@@ -64,13 +64,16 @@ class _ApiRefereeBookingPageState extends State<ApiRefereeBookingPage> {
         _api.getList('/referees/requests/me', token: token),
         _api.getList('/referees', token: token),
       ]);
-      final profile = await _api.get('/profile/me', token: token);
+      Map<String, dynamic> profile = {};
+      Map<String, dynamic> account = {};
+      try { profile = await _api.get('/profile/me', token: token); } catch (_) {}
+      try { account = await _api.get('/auth/me', token: token); } catch (_) {}
       if (!mounted) return;
       if (_contactName.text.isEmpty) {
         _contactName.text = profile['full_name']?.toString() ?? profile['name']?.toString() ?? '';
       }
       if (_contactPhone.text.isEmpty) {
-        _contactPhone.text = profile['phone']?.toString() ?? '';
+        _contactPhone.text = account['phone']?.toString() ?? '';
       }
       final savedSport = profile['sport']?.toString();
       if (_sports.contains(savedSport)) _sport = savedSport!;
