@@ -177,6 +177,8 @@ def create_qpay_invoice(
     pending = db.query(QPayInvoice).filter_by(
         user_id=user.id, order_type=payload.order_type, order_id=str(payload.order_id), status="pending"
     ).order_by(QPayInvoice.created_at.desc()).first()
+    if pending and pending.amount != order_data["amount"]:
+        raise HTTPException(status_code=409, detail="Төлбөрийн нэхэмжлэл үүссэний дараа захиалгын үнэ өөрчлөгдсөн байна.")
     if pending:
         return {
             "id": pending.id, "provider": "qpay", "status": pending.status,
@@ -258,7 +260,7 @@ def _confirm_qpay_invoice(db: Session, invoice: QPayInvoice):
         external_payment_id=invoice.qpay_invoice_id,
         order_type=invoice.order_type,
         order_id=invoice.order_id,
-        category=invoice.order_type.replace("_", " "),
+        category=(\n            "sports_store" if invoice.order_type == "store_order" else\n            "referee" if invoice.order_type == "referee_booking" else\n            "venue_booking" if invoice.order_type == "venue_booking" else\n            (db.get(ServiceRequest, int(invoice.order_id)).category if invoice.order_type == "service_request" and db.get(ServiceRequest, int(invoice.order_id)) else "service") if invoice.order_type == "service_request" else\n            "club_membership"\n        ),
         buyer_user_id=invoice.user_id,
         provider_user_id=next(iter(provider_ids)) if len(provider_ids) == 1 else None,
         amount=invoice.amount,
@@ -272,6 +274,7 @@ def _confirm_qpay_invoice(db: Session, invoice: QPayInvoice):
 
 
 @router.post("/qpay/callback/{sender_invoice_no}")
+@router.get("/qpay/callback/{sender_invoice_no}")
 def qpay_callback(sender_invoice_no: str, db: Session = Depends(get_db)):
     invoice = db.query(QPayInvoice).filter_by(sender_invoice_no=sender_invoice_no).with_for_update().first()
     if invoice is None:
