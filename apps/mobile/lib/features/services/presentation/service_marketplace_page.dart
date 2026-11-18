@@ -839,7 +839,7 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
                 onPressed: _saving ? null : () => _payServiceRequest(id),
                 icon: const Icon(Icons.qr_code_2), label: const Text('QPAY-ЭЭР ТӨЛӨХ'),
               )),
-            if ((isRequester || isProvider) && status == 'accepted' && request['payment_status'] == 'paid' || request['payment_status'] == 'free')
+            if ((isRequester || isProvider) && status == 'accepted' && (request['payment_status'] == 'paid' || request['payment_status'] == 'free'))
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
