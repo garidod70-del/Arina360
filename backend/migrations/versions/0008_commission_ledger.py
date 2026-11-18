@@ -42,7 +42,7 @@ def upgrade():
         "commission_ledger",
         sa.Column("id", sa.Integer(), primary_key=True),
         sa.Column("payment_id", sa.Integer(), sa.ForeignKey("payment_transactions.id", ondelete="RESTRICT"), nullable=False),
-        sa.Column("event_key", sa.String(200), nullable=False),
+        sa.Column("event_key", sa.String(255), nullable=False),
         sa.Column("event_type", sa.String(20), nullable=False),
         sa.Column("gross_delta", sa.Integer(), nullable=False),
         sa.Column("commission_delta", sa.Integer(), nullable=False),
