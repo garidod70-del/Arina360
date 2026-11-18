@@ -182,12 +182,14 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
         token: token,
       );
       final requests = await _api.getList('/services/requests/me', token: token);
-      final results = await Future.wait([
-        _api.get('/auth/me', token: token),
-        _api.get('/profile/me', token: token),
-      ]);
-      final currentUser = results[0];
-      final profile = results[1];
+      final currentUser = await _api.get('/auth/me', token: token);
+      Map<String, dynamic> profile = {};
+      try {
+        profile = await _api.get('/profile/me', token: token);
+      } catch (_) {
+        // A new account may not have completed its profile yet.
+      }
+      profile = {...profile, 'phone': currentUser['phone']};
 
       if (!mounted) return;
 
