@@ -22,13 +22,13 @@ def _base_url() -> str:
 def _request_token(force: bool = False) -> str:
     global _cached_token, _token_expires_at
     settings = get_settings()
-    if not settings.qpay_username or not settings.qpay_password:
+    if not settings.qpay_client_id or not settings.qpay_client_secret:
         raise HTTPException(status_code=503, detail="QPay мерчантын эрхийн тохиргоо дутуу байна.")
     with _token_lock:
         if not force and _cached_token and time.time() < _token_expires_at - 60:
             return _cached_token
         credentials = base64.b64encode(
-            f"{settings.qpay_username}:{settings.qpay_password}".encode()
+            f"{settings.qpay_client_id}:{settings.qpay_client_secret}".encode()
         ).decode()
         try:
             response = httpx.post(
