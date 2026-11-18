@@ -93,20 +93,75 @@ abstract class _EcosystemState<T extends StatefulWidget> extends State<T> {
   }
   Widget status() => busy ? const LinearProgressIndicator() : error == null ? const SizedBox.shrink() :
     Card(color: Theme.of(context).colorScheme.errorContainer, child: Padding(padding: const EdgeInsets.all(12), child: Text(error!)));
+  Map<String, dynamic>? _profileCache;
+
+  Future<Map<String, dynamic>> profile() async {
+    if (_profileCache != null) return _profileCache!;
+    try {
+      final value = await api.get('/profile/me', token: await token());
+      _profileCache = value;
+      return value;
+    } catch (_) {
+      return const <String, dynamic>{};
+    }
+  }
+
+  String _profileValue(Map<String, dynamic> profile, String key) {
+    final value = switch (key) {
+      'contact_phone' || 'phone' => profile['phone'],
+      'full_name' || 'name' => profile['full_name'] ?? profile['name'],
+      'sport' => profile['sport'],
+      'region' => profile['region'],
+      'delivery_address' || 'address' => profile['address'] ?? profile['delivery_address'],
+      _ => null,
+    };
+    return value?.toString() ?? '';
+  }
+
   Future<Map<String, dynamic>?> form(String title, List<_Input> inputs) async {
+    final savedProfile = await profile();
     final ctrls = <String, TextEditingController>{};
-    for (final input in inputs) { ctrls[input.key] = TextEditingController(text: input.initial); }
+    final selected = <String, String>{};
+    for (final input in inputs) {
+      final fromProfile = _profileValue(savedProfile, input.key);
+      final initial = fromProfile.isNotEmpty ? fromProfile : input.initial;
+      ctrls[input.key] = TextEditingController(text: initial);
+      if (input.options.isNotEmpty) {
+        selected[input.key] = input.options.contains(initial) ? initial : input.options.first;
+        ctrls[input.key]!.text = selected[input.key]!;
+      }
+    }
     final result = await showDialog<Map<String, dynamic>>(context: context, builder: (ctx) => AlertDialog(
       title: Text(title),
       content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: inputs.map((f) => Padding(
         padding: const EdgeInsets.only(bottom: 8),
-        child: TextField(controller: ctrls[f.key], keyboardType: f.number ? TextInputType.number : TextInputType.text, decoration: InputDecoration(labelText: f.label)),
+        child: f.options.isNotEmpty
+          ? DropdownButtonFormField<String>(
+              value: selected[f.key],
+              isExpanded: true,
+              decoration: InputDecoration(labelText: f.label),
+              items: f.options.map((option) => DropdownMenuItem(value: option, child: Text(option))).toList(),
+              onChanged: (value) { if (value != null) { selected[f.key] = value; ctrls[f.key]!.text = value; } },
+            )
+          : TextField(
+              controller: ctrls[f.key],
+              keyboardType: f.number ? TextInputType.number : TextInputType.text,
+              decoration: InputDecoration(
+                labelText: f.label,
+                suffixIcon: _profileValue(savedProfile, f.key).isNotEmpty
+                  ? const Icon(Icons.verified_user_outlined, size: 18)
+                  : null,
+              ),
+            ),
       )).toList())),
       actions: [
         TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('БОЛИХ')),
         FilledButton(onPressed: () {
           final data = <String, dynamic>{};
-          for (final f in inputs) { final v = ctrls[f.key]!.text.trim(); data[f.key] = f.number ? int.tryParse(v) ?? 0 : v; }
+          for (final f in inputs) {
+            final v = ctrls[f.key]!.text.trim();
+            data[f.key] = f.number ? int.tryParse(v) ?? 0 : v;
+          }
           Navigator.pop(ctx, data);
         }, child: const Text('ХАДГАЛАХ')),
       ],
@@ -119,8 +174,10 @@ abstract class _EcosystemState<T extends StatefulWidget> extends State<T> {
 }
 
 class _Input {
-  final String key, label, initial; final bool number;
-  const _Input(this.key, this.label, {this.initial = '', this.number = false});
+  final String key, label, initial;
+  final bool number;
+  final List<String> options;
+  const _Input(this.key, this.label, {this.initial = '', this.number = false, this.options = const []});
 }
 
 class QrPassPage extends StatefulWidget {
@@ -134,7 +191,7 @@ class _QrPassPageState extends _EcosystemState<QrPassPage> {
   Future<void> issue() async {
     final data = await form('QR эрх үүсгэх', const [
       _Input('purpose', 'Зориулалт', initial: 'event_entry'),
-      _Input('reference_type', 'Төрөл: competition / club / fitness_pass', initial: 'fitness_pass'),
+      _Input('reference_type', 'Холбоосын төрөл', initial: 'fitness_pass', options: ['fitness_pass', 'competition', 'club']),
       _Input('reference_id', 'Холбоосын ID', initial: '1', number: true),
       _Input('expires_in_minutes', 'Хүчинтэй минут', initial: '60', number: true),
     ]);
@@ -202,7 +259,7 @@ class _MedalBoardPageState extends _EcosystemState<MedalBoardPage> {
     final data = await form('Медаль бүртгэх', const [
       _Input('tournament_id', 'Тэмцээний ID', initial: '1', number: true),
       _Input('participant_id', 'Тамирчны ID', initial: '1', number: true),
-      _Input('medal', 'gold / silver / bronze', initial: 'gold'),
+      _Input('medal', 'Медалийн төрөл', initial: 'gold', options: ['gold', 'silver', 'bronze']),
       _Input('points', 'Оноо', initial: '10', number: true),
     ]);
     if (data == null) return;
@@ -249,7 +306,7 @@ class _ClubPageState extends _EcosystemState<ClubPage> {
   }
   Future<void> createClub() async {
     final data = await form('Клуб үүсгэх', const [
-      _Input('name', 'Клубын нэр'), _Input('sport', 'Спортын төрөл', initial: 'Жүдо'),
+      _Input('name', 'Клубын нэр'), _Input('sport', 'Спортын төрөл', initial: 'Жүдо', options: ['Жүдо', 'Самбо', 'Чөлөөт бөх', 'Үндэсний бөх', 'Бокс', 'Волейбол', 'Сагсан бөмбөг', 'Хөл бөмбөг', 'Таеквондо', 'Каратэ', 'Гимнастик', 'Бусад']),
       _Input('region', 'Аймаг / хот'), _Input('description', 'Тайлбар'),
       _Input('contact_phone', 'Утас'),
     ]);
