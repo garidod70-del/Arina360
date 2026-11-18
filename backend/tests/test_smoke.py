@@ -69,6 +69,7 @@ def test_production_configuration_accepts_secure_postgresql_and_qpay_settings():
         ({"qpay_base_url": "https://merchant-sandbox.qpay.mn"}, "merchant.qpay.mn"),
         ({"qpay_client_secret": ""}, "QPay client ID"),
         ({"qpay_callback_url": "http://api.example.mn"}, "HTTPS API origin"),
+        ({"qpay_callback_url": "https://api.example.mn/api/v1"}, "without a path or query"),
     ],
 )
 def test_production_configuration_rejects_unsafe_or_incomplete_values(overrides, message):
