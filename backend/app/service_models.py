@@ -45,6 +45,7 @@ class ServiceRequest(Base):
     preferred_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     contact_phone: Mapped[str] = mapped_column(String(24), nullable=False)
     status: Mapped[str] = mapped_column(String(24), default="pending", nullable=False, index=True)
+    payment_status: Mapped[str] = mapped_column(String(20), default="unpaid", nullable=False, index=True)
     response_note: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False)
