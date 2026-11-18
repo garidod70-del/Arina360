@@ -88,15 +88,44 @@ def record_refund(db: Session, *, provider: str, external_payment_id: str,
 
     new_total_refund = payment.refunded_amount + refund_amount
     allocations = db.query(PaymentAllocation).filter_by(payment_id=payment.id).order_by(PaymentAllocation.id).all()
+    # Allocate every refunded tugrik across providers without losing rounding remainder.
+    targets = []
+    allocated_refund = 0
+    for allocation in allocations:
+        target = allocation.gross_amount if new_total_refund == payment.gross_amount else (
+            allocation.gross_amount * new_total_refund
+        ) // payment.gross_amount
+        targets.append(target)
+        allocated_refund += target - allocation.refunded_amount
+    remainder = refund_amount - allocated_refund
+    for index, allocation in enumerate(allocations):
+        if remainder <= 0:
+            break
+        if targets[index] < allocation.gross_amount:
+            targets[index] += 1
+            remainder -= 1
+
+    target_total_commission = payment.commission_amount if new_total_refund == payment.gross_amount else (
+        payment.commission_amount * new_total_refund
+    ) // payment.gross_amount
+    commission_targets = []
+    commission_allocated = 0
+    for index, allocation in enumerate(allocations):
+        target = allocation.commission_amount if index == len(allocations) - 1 else (
+            target_total_commission * allocation.commission_amount // max(payment.commission_amount, 1)
+        )
+        commission_targets.append(target)
+        commission_allocated += target
+    if commission_targets:
+        commission_targets[-1] += target_total_commission - commission_allocated
+
     commission_reversal = 0
     provider_net_reversal = 0
-    for allocation in allocations:
-        target_refund = allocation.gross_amount if new_total_refund == payment.gross_amount else (allocation.gross_amount * new_total_refund) // payment.gross_amount
-        refund_delta = target_refund - allocation.refunded_amount
-        target_commission = (allocation.commission_amount * target_refund) // allocation.gross_amount
-        commission_delta = target_commission - allocation.refunded_commission
-        allocation.refunded_amount = target_refund
-        allocation.refunded_commission = target_commission
+    for index, allocation in enumerate(allocations):
+        refund_delta = targets[index] - allocation.refunded_amount
+        commission_delta = commission_targets[index] - allocation.refunded_commission
+        allocation.refunded_amount = targets[index]
+        allocation.refunded_commission = commission_targets[index]
         commission_reversal += commission_delta
         provider_net_reversal += refund_delta - commission_delta
 
