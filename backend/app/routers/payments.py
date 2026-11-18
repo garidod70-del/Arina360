@@ -15,7 +15,7 @@ from app.dependencies import get_current_user
 from app.models import User
 from app.payment_models import PaymentAllocation, PaymentTransaction
 from app.payment_service import record_payment, record_refund
-from app.qpay_client import check_invoice, create_invoice
+from app.qpay_client import check_invoice, create_invoice, refund_payment
 from app.qpay_models import QPayInvoice
 from app.ecosystem_models import (
     Club, ClubMembership, Notification, Product, ShopOrder, ShopOrderItem,
@@ -303,6 +303,74 @@ def check_qpay_invoice(
     result = _confirm_qpay_invoice(db, invoice)
     db.commit()
     return {"id": invoice.id, **result}
+
+
+def _mark_order_refunded(db: Session, invoice: QPayInvoice):
+    order_id = int(invoice.order_id)
+    if invoice.order_type == "store_order":
+        order = db.get(ShopOrder, order_id)
+        if order:
+            order.payment_status = "refunded"
+            order.status = "refunded"
+    elif invoice.order_type == "referee_booking":
+        order = db.get(RefereeBooking, order_id)
+        if order:
+            order.payment_status = "refunded"
+    elif invoice.order_type == "venue_booking":
+        order = db.get(VenueBooking, order_id)
+        if order:
+            order.payment_status = "refunded"
+    elif invoice.order_type == "service_request":
+        order = db.get(ServiceRequest, order_id)
+        if order:
+            order.payment_status = "refunded"
+    elif invoice.order_type == "club_membership":
+        membership = db.get(ClubMembership, order_id)
+        if membership:
+            membership.payment_status = "refunded"
+            membership.status = "pending_payment"
+
+
+@router.post("/qpay/invoices/{invoice_id}/refund")
+def refund_qpay_invoice(
+    invoice_id: int,
+    admin: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if not _is_admin(admin):
+        raise HTTPException(status_code=403, detail="Зөвхөн админ төлбөр буцаана.")
+    invoice = db.get(QPayInvoice, invoice_id)
+    if invoice is None:
+        raise HTTPException(status_code=404, detail="QPay нэхэмжлэл олдсонгүй.")
+    if invoice.status != "paid" or not invoice.qpay_payment_id:
+        raise HTTPException(status_code=409, detail="Зөвхөн баталгаажсан төлбөрийг буцаана.")
+    payment = db.query(PaymentTransaction).filter_by(
+        provider="qpay", external_payment_id=invoice.qpay_invoice_id
+    ).with_for_update().first()
+    if payment is None:
+        raise HTTPException(status_code=404, detail="Төлбөрийн бүртгэл олдсонгүй.")
+    if payment.refunded_amount == payment.gross_amount:
+        return {"status": "refunded", "already_refunded": True}
+    payment_ids = [value for value in invoice.qpay_payment_id.split(",") if value]
+    if len(payment_ids) != 1:
+        raise HTTPException(status_code=409, detail="Олон QPay гүйлгээтэй нэхэмжлэлийг QPay мерчантын самбараас тус бүр буцааж, webhook-оор тулгана уу.")
+    refund_payment(payment_ids[0])
+    refund_amount = payment.gross_amount - payment.refunded_amount
+    record_refund(
+        db, provider="qpay", external_payment_id=invoice.qpay_invoice_id,
+        external_event_id=f"admin-refund-{payment_ids[0]}",
+        refund_amount=refund_amount,
+    )
+    invoice.status = "refunded"
+    _mark_order_refunded(db, invoice)
+    _notify(db, invoice.user_id, "Төлбөр буцаагдлаа",
+            f"Нэхэмжлэл #{invoice.id} • {refund_amount} ₮ буцаалт баталгаажлаа.", "refund")
+    allocations = db.query(PaymentAllocation).filter_by(payment_id=payment.id).all()
+    for allocation in allocations:
+        _notify(db, allocation.provider_user_id, "Захиалгын төлбөр буцаагдлаа",
+                f"Нэхэмжлэл #{invoice.id} • {refund_amount} ₮ буцаалт бүртгэгдлээ.", "refund")
+    db.commit()
+    return {"status": "refunded", "refund_amount": refund_amount, "commission_reversed": payment.refunded_commission}
 
 
 @router.get("/qpay/invoices/{invoice_id}")
