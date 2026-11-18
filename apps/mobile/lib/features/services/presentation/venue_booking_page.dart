@@ -77,8 +77,8 @@ class _VenueBookingPageState extends State<VenueBookingPage> {
     try {
       final token = await _token();
       if (token != null && token.isNotEmpty) {
-        final profile = await _api.get('/profile/me', token: token);
-        savedPhone = profile['phone']?.toString() ?? '';
+        final account = await _api.get('/auth/me', token: token);
+        savedPhone = account['phone']?.toString() ?? '';
       }
     } catch (_) {}
     final phone = TextEditingController(text: savedPhone);
