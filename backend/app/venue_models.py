@@ -40,5 +40,6 @@ class VenueBooking(Base):
     contact_phone: Mapped[str] = mapped_column(String(24), nullable=False)
     purpose: Mapped[str | None] = mapped_column(String(500), nullable=True)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending", index=True)
+    payment_status: Mapped[str] = mapped_column(String(20), nullable=False, default="unpaid", index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False)

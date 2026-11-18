@@ -33,7 +33,7 @@ def _booking_output(item: VenueBooking) -> VenueBookingOutput:
     return VenueBookingOutput(
         id=item.id, slot_id=item.slot_id, customer_id=item.customer_id,
         provider_user_id=item.provider_user_id, contact_phone=item.contact_phone,
-        purpose=item.purpose, status=item.status, created_at=item.created_at,
+        purpose=item.purpose, status=item.status, payment_status=item.payment_status, created_at=item.created_at,
     )
 
 
@@ -169,6 +169,8 @@ def decide_venue_booking(
     slot = db.query(VenueSlot).filter(VenueSlot.id == item.slot_id).first()
     if payload.accepted:
         item.status = "confirmed"
+        if slot and slot.price <= 0:
+            item.payment_status = "free"
         if slot:
             slot.status = "booked"
     else:

@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+import hashlib
 import uuid
 
 from fastapi.testclient import TestClient
@@ -6,6 +7,7 @@ from fastapi.testclient import TestClient
 from app.main import app
 from app.database import SessionLocal
 from app.models import User, UserRole
+from app.ecosystem_models import QrPass
 
 
 def register(client, phone):
@@ -36,6 +38,7 @@ def test_club_membership_and_coach_verification_workflow():
     with TestClient(app) as client:
         owner, owner_id = register(client, "+97691" + suffix() + "01")
         athlete, _ = register(client, "+97691" + suffix() + "02")
+        manager, _ = register(client, "+97691" + suffix() + "04")
         admin, admin_id = register(client, "+97691" + suffix() + "03")
         grant_admin(admin_id)
 
@@ -63,6 +66,51 @@ def test_club_membership_and_coach_verification_workflow():
         assert decision.status_code == 200
         assert decision.json()["status"] == "active"
 
+        manager_join = client.post(f"/api/v1/clubs/{club_id}/join", headers=manager)
+        assert manager_join.status_code == 201
+        manager_membership_id = manager_join.json()["id"]
+        manager_accepted = client.post(
+            f"/api/v1/clubs/{club_id}/members/{manager_membership_id}/decision",
+            headers=owner, json={"accepted": True},
+        )
+        assert manager_accepted.status_code == 200
+        promoted = client.post(
+            f"/api/v1/clubs/{club_id}/members/{manager_membership_id}/role",
+            headers=owner, json={"role": "manager"},
+        )
+        assert promoted.status_code == 200
+        assert client.get(f"/api/v1/clubs/{club_id}/members", headers=manager).status_code == 200
+        manager_update = client.patch(
+            f"/api/v1/clubs/{club_id}", headers=manager,
+            json={"description": "Менежерийн эрхийн шалгалт"},
+        )
+        assert manager_update.status_code == 200
+        denied_athlete_update = client.patch(
+            f"/api/v1/clubs/{club_id}", headers=athlete,
+            json={"description": "Эрхгүй өөрчлөлт"},
+        )
+        assert denied_athlete_update.status_code == 403
+        manager_qr = client.post("/api/v1/qr/passes", headers=manager, json={
+            "purpose": "club_entry", "reference_type": "club",
+            "reference_id": club_id, "expires_in_minutes": 20,
+        })
+        assert manager_qr.status_code == 201
+        removed_manager = client.delete(
+            f"/api/v1/clubs/{club_id}/members/{manager_membership_id}",
+            headers=owner,
+        )
+        assert removed_manager.status_code == 200
+        revoked_manager_scan = client.post(
+            "/api/v1/qr/verify", headers=manager,
+            json={"token": manager_qr.json()["token"]},
+        )
+        assert revoked_manager_scan.status_code == 403
+        reverified = client.post(
+            f"/api/v1/admin/clubs/{club_id}/verify", headers=admin,
+            json={"approved": True},
+        )
+        assert reverified.status_code == 200
+
         coach = client.post("/api/v1/coaches/profile", headers=owner, json={
             "club_id": club_id, "sport": "Жүдо", "qualification": "Дасгалжуулагчийн үнэмлэх",
             "experience_years": 6, "specialties": "Өсвөрийн тамирчдын бэлтгэл",
@@ -88,6 +136,15 @@ def test_qr_pass_is_single_use_and_permission_checked():
         })
         assert issued.status_code == 201
         token = issued.json()["token"]
+        db = SessionLocal()
+        try:
+            stored_pass = db.query(QrPass).filter_by(
+                token_hash=hashlib.sha256(token.encode()).hexdigest()
+            ).one()
+            assert stored_pass.token_hash != token
+            assert stored_pass.used_at is None
+        finally:
+            db.close()
 
         denied = client.post("/api/v1/qr/verify", headers=other, json={"token": token})
         assert denied.status_code == 403
@@ -216,3 +273,104 @@ def test_medal_awards_leaderboard_and_admin_analytics():
         assert analytics.status_code == 200
         assert analytics.json()["medals"] >= 1
         assert analytics.json()["clubs"] >= 0
+
+def test_store_owner_permissions_and_cancelled_order_restores_stock():
+    with TestClient(app) as client:
+        seller, _ = register(client, "+97696" + suffix() + "01")
+        buyer, _ = register(client, "+97696" + suffix() + "02")
+        stranger, _ = register(client, "+97696" + suffix() + "03")
+
+        product = client.post("/api/v1/store/products", headers=seller, json={
+            "title": "Тестийн жүдогийн цүнх", "description": "Эзэмшлийн шалгалт",
+            "category": "Цүнх", "price": 42000, "stock": 5,
+        })
+        assert product.status_code == 201
+        product_id = product.json()["id"]
+
+        denied_edit = client.patch(f"/api/v1/store/products/{product_id}", headers=stranger, json={
+            "price": 1, "stock": 999,
+        })
+        assert denied_edit.status_code == 403
+
+        client.post("/api/v1/store/cart", headers=buyer, json={
+            "product_id": product_id, "quantity": 2,
+        })
+        checkout = client.post("/api/v1/store/checkout", headers=buyer, json={
+            "delivery_address": "Улаанбаатар хот, Сүхбаатар дүүрэг",
+            "contact_phone": "+97699112255",
+        })
+        assert checkout.status_code == 201
+        order_id = checkout.json()["id"]
+
+        denied_status = client.post(f"/api/v1/store/orders/{order_id}/status",
+                                    headers=stranger, json={"status": "confirmed"})
+        assert denied_status.status_code == 403
+
+        cancelled = client.post(f"/api/v1/store/orders/{order_id}/status",
+                                headers=seller, json={"status": "cancelled"})
+        assert cancelled.status_code == 200
+        assert cancelled.json()["status"] == "cancelled"
+
+        products = client.get("/api/v1/store/products")
+        stored = next(item for item in products.json() if item["id"] == product_id)
+        assert stored["stock"] == 5
+
+        repeated_cancel = client.post(f"/api/v1/store/orders/{order_id}/status",
+                                      headers=seller, json={"status": "cancelled"})
+        assert repeated_cancel.status_code == 409
+
+
+def test_notification_read_is_scoped_to_authenticated_user():
+    with TestClient(app) as client:
+        sender, _ = register(client, "+97697" + suffix() + "01")
+        recipient, _ = register(client, "+97697" + suffix() + "02")
+        stranger, _ = register(client, "+97697" + suffix() + "03")
+        recipient_id = client.get("/api/v1/auth/me", headers=recipient).json()["id"]
+
+        conversation = client.post("/api/v1/chat/conversations", headers=sender,
+                                   json={"other_user_id": recipient_id})
+        assert conversation.status_code == 201
+        sent = client.post(
+            f"/api/v1/chat/conversations/{conversation.json()['id']}/messages",
+            headers=sender, json={"body": "Эрхийн шалгалтын мэдэгдэл"},
+        )
+        assert sent.status_code == 201
+
+        notifications = client.get("/api/v1/notifications", headers=recipient)
+        notification_id = next(
+            item["id"] for item in notifications.json() if item["category"] == "chat"
+        )
+        denied = client.post(
+            f"/api/v1/notifications/{notification_id}/read", headers=stranger
+        )
+        assert denied.status_code == 404
+
+        allowed = client.post(
+            f"/api/v1/notifications/{notification_id}/read", headers=recipient
+        )
+        assert allowed.status_code == 200
+
+
+
+def test_qr_pass_expiry_is_enforced():
+    with TestClient(app) as client:
+        owner, _ = register(client, "+97698" + suffix() + "01")
+        issued = client.post("/api/v1/qr/passes", headers=owner, json={
+            "purpose": "fitness_entry", "reference_type": "fitness_pass",
+            "reference_id": 24, "expires_in_minutes": 5,
+        })
+        assert issued.status_code == 201
+        token = issued.json()["token"]
+
+        db = SessionLocal()
+        try:
+            stored_pass = db.query(QrPass).filter_by(
+                token_hash=hashlib.sha256(token.encode()).hexdigest()
+            ).one()
+            stored_pass.expires_at = datetime.now(timezone.utc) - timedelta(minutes=1)
+            db.commit()
+        finally:
+            db.close()
+
+        expired = client.post("/api/v1/qr/verify", headers=owner, json={"token": token})
+        assert expired.status_code == 410

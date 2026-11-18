@@ -70,6 +70,12 @@ def test_referee_request_assignment_acceptance_completion_and_rating():
         assert accepted.status_code == 200
         assert accepted.json()["status"] == "accepted"
 
+        with SessionLocal() as db:
+            from app.referee_models import RefereeBooking
+            booking = db.get(RefereeBooking, booking_id)
+            booking.payment_status = "paid"  # simulate a verified gateway settlement
+            db.commit()
+
         completed = client.post(
             f"/api/v1/referees/requests/{booking_id}/complete", headers=organizer_headers
         )

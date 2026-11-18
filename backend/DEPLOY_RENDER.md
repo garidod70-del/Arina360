@@ -1,7 +1,14 @@
 # ARENA 360 API — HTTPS deployment
 
-Import the repository into Render and apply the root `render.yaml` Blueprint. Render provisions the Docker web service and PostgreSQL database and assigns a managed HTTPS URL. The container applies Alembic migrations before starting the API.
+Import the repository into Render and apply the root `render.yaml` Blueprint. Render provisions the Docker web service and PostgreSQL database and assigns a managed HTTPS URL. During Blueprint setup, fill the prompted `CORS_ORIGINS`, `QPAY_CLIENT_ID`, `QPAY_CLIENT_SECRET`, `QPAY_INVOICE_CODE`, and `QPAY_CALLBACK_URL` values. Use only your real QPay Merchant V2 production credentials; never commit or send them in chat. Set `CORS_ORIGINS` to the exact HTTPS origin(s) of your web admin/client, comma-separated. Set `QPAY_CALLBACK_URL` to the public API origin, e.g. `https://YOUR-SERVICE.onrender.com` (no path). The Blueprint pins `QPAY_BASE_URL` to the production merchant host. The container applies Alembic migrations before starting the API.
 
+## Payments, seller alerts, and provider settlement
+
+- QPay payment confirmation is server-side. The app records the 5% platform commission and 95% provider net only after QPay confirms a successful MNT payment.
+- Store sellers receive an in-app order notification after payment confirmation. It includes the buyer's registered account phone number and delivery details; the checkout does not ask the buyer to type a phone number.
+- SMS and operating-system push notifications are not activated by this repository configuration. They require an SMS gateway account/API credentials and Firebase project configuration (Android app registration and google-services.json) before they can be sent.
+- Provider net earnings are recorded in the payment allocation ledger and displayed in provider/admin reports. Automatic bank payouts are not enabled: a supported bank/disbursement API, merchant authorization, beneficiary account verification, and settlement credentials must be supplied before money can be transferred automatically. Do not treat a ledger balance as a completed bank transfer.
+- Never put QPay, SMS, Firebase, bank, or signing secrets in source control or chat. Store them in the corresponding deployment secret manager.
 ## Verify deployment
 Open `https://YOUR-SERVICE.onrender.com/health`; expected response:
 ```json
@@ -23,7 +30,31 @@ Use the admin account's bearer token:
 - Only verified referees appear in the public directory and can be assigned.
 
 ## Build the live API APK
-Set GitHub repository variable `ARENA_API_BASE_URL` to the exact HTTPS origin, e.g. `https://arena360-api.onrender.com` (no `/api/v1` suffix), then run the `ARENA 360 Android APK` workflow. The build injects this value into Flutter. If the variable is empty, the APK deliberately stays in local prototype mode.
+Set GitHub Actions repository variable `ARENA_API_BASE_URL` (not a secret) to the exact HTTPS origin, e.g. `https://arena360-api.onrender.com` (no `/api/v1` suffix), then run the `ARENA 360 Signed Release` workflow. The build injects this value into Flutter and refuses to produce a production APK when it is missing or not HTTPS.
 
 ## Deployment boundary
 Repository code cannot create a Render account, accept its terms, select a paid plan, or approve the service on the owner's behalf. The owner must import/apply the Blueprint once. The included free database is for initial smoke testing only and may expire; use a persistent database plan before public production. The API records an administrator's licence check; it does not independently query the federation registry.
+
+
+## Production environment checklist
+
+Set these values in the Render service's Environment settings. Never commit real credentials to Git:
+
+- `APP_ENV=production`
+- `DATABASE_URL`: persistent managed PostgreSQL connection string
+- `JWT_SECRET`: unique random secret with at least 32 characters
+- `AUTO_CREATE_TABLES=false` (the deploy command applies Alembic migrations)
+- `CORS_ORIGINS`: comma-separated HTTPS origins for the deployed clients only
+- `QPAY_BASE_URL=https://merchant.qpay.mn`
+- `QPAY_CLIENT_ID`, `QPAY_CLIENT_SECRET`, and `QPAY_INVOICE_CODE`: issued by the QPay merchant account
+- `QPAY_CALLBACK_URL`: the public HTTPS API origin without a path, e.g. `https://YOUR-SERVICE.onrender.com`
+
+The API intentionally refuses production startup when the database, JWT, CORS, or QPay production settings are unsafe or incomplete. The QPay callback is `/api/v1/payments/qpay/callback/{sender_invoice_no}`; it must be reachable over HTTPS from QPay.
+
+## Settlement, notifications, and external credentials
+
+- A verified successful payment records the gross amount, the 5% platform commission, and the provider's 95% net allocation in the payment ledger. Duplicate settlement events are idempotent; refunds reverse the commission proportionally.
+- The current seller/customer notifications are in-app database notifications. They are not SMS or push notifications. To send SMS, choose an SMS gateway and configure its API credentials and sender identity. To deliver push notifications, configure an FCM project and mobile app registration. No provider credentials are stored in this repository.
+- Provider net amounts are recorded as payable ledger balances only. Automatic bank transfers are not active. They require a supported bank/payment payout API, merchant approval, provider bank-account verification, and an agreed payout schedule. Do not treat a ledger allocation as a completed bank transfer.
+- Until these external services are configured and their live callbacks/transfers are tested, keep the app in a controlled pilot and reconcile payouts manually.
+

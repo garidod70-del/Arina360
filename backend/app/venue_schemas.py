@@ -50,6 +50,7 @@ class VenueBookingOutput(BaseModel):
     contact_phone: str
     purpose: str | None
     status: str
+    payment_status: str = "unpaid"
     created_at: datetime
 
 

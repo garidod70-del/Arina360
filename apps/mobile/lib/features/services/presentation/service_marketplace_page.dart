@@ -3,6 +3,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../../../core/config/api_config.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/widgets/qpay_payment_dialog.dart';
 import '../domain/service_item.dart';
 
 class ServiceMarketplacePage extends StatefulWidget {
@@ -23,6 +24,10 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
   List<Map<String, dynamic>> _providers = [];
   List<Map<String, dynamic>> _requests = [];
   int? _currentUserId;
+  Map<String, dynamic> _profile = {};
+  Map<String, dynamic> _earnings = {};
+  static const _sportOptions = <String>['Жүдо', 'Самбо', 'Чөлөөт бөх', 'Үндэсний бөх', 'Бокс', 'Волейбол', 'Сагсан бөмбөг', 'Хөл бөмбөг', 'Таеквондо', 'Каратэ', 'Гимнастик', 'Бусад'];
+  static const _regions = <String>['Улаанбаатар', 'Архангай', 'Баян-Өлгий', 'Баянхонгор', 'Булган', 'Говь-Алтай', 'Говьсүмбэр', 'Дархан-Уул', 'Дорноговь', 'Дорнод', 'Дундговь', 'Завхан', 'Орхон', 'Өвөрхангай', 'Өмнөговь', 'Сүхбаатар', 'Сэлэнгэ', 'Төв', 'Увс', 'Ховд', 'Хөвсгөл', 'Хэнтий'];
   bool _loading = false;
   bool _saving = false;
   String? _error;
@@ -65,6 +70,19 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
     'sports_analyst': ['Тамирчин эсвэл багийн нэр', 'Шинжилгээний төрөл (техник / тактик / статистик)', 'Видео эсвэл материал байгаа эсэх'],
     'sports_store': ['Барааны нэр / загвар', 'Хэмжээ / өнгө', 'Тоо ширхэг', 'Хүргэлтийн байршил'],
     'clubs_training': ['Насны ангилал', 'Бэлтгэлийн түвшин (анхан / дунд / ахисан)', 'Сонирхож буй хуваарь'],
+  };
+
+  static const Map<String, List<String>> _quickRequestOptions = {
+    'coach': ['Ганцаарчилсан бэлтгэл', 'Багийн бэлтгэл', 'Хүүхдийн бэлтгэл', 'Тэмцээний бэлтгэл'],
+    'sports_doctor': ['Ерөнхий үзлэг', 'Гэмтлийн үнэлгээ', 'Тэмцээний өмнөх үзлэг', 'Зөвлөгөө авах'],
+    'strength_specialist': ['Ерөнхий хүч хөгжүүлэх', 'Тэсрэлттэй хүч', 'Хурд, хөдөлгөөний чадвар', 'Биеийн бэлтгэлийн үнэлгээ'],
+    'sports_psychologist': ['Сэтгэл зүйн зөвлөгөө', 'Тэмцээний өмнөх бэлтгэл', 'Анхаарал төвлөрөл'],
+    'sports_nutritionist': ['Хооллолтын төлөвлөгөө', 'Жингийн зохицуулалт', 'Тэмцээний үеийн хооллолт'],
+    'physiotherapist': ['Нөхөн сэргээх үйлчилгээ', 'Хөдөлгөөн засал', 'Гэмтлээс урьдчилан сэргийлэх'],
+    'sports_analyst': ['Техник шинжилгээ', 'Тактикийн шинжилгээ', 'Тэмцээний статистик'],
+    'venue_booking': ['Бэлтгэлийн заал захиалах', 'Тэмцээний талбай захиалах', 'Сургалтын цаг захиалах'],
+    'sports_store': ['Бараа худалдан авах', 'Барааны хэмжээ, загвар асуух', 'Бөөнөөр захиалах'],
+    'clubs_training': ['Клубт элсэх', 'Туршилтын бэлтгэлд оролцох', 'Сургалтын хуваарь авах'],
   };
 
   static const Map<String, List<String>> _providerExtraFields = {
@@ -166,7 +184,20 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
         token: token,
       );
       final requests = await _api.getList('/services/requests/me', token: token);
+      Map<String, dynamic> earnings = {};
+      try {
+        earnings = await _api.get('/payments/provider/summary', token: token);
+      } catch (_) {
+        // Hide earnings until a provider has settled transactions.
+      }
       final currentUser = await _api.get('/auth/me', token: token);
+      Map<String, dynamic> profile = {};
+      try {
+        profile = await _api.get('/profile/me', token: token);
+      } catch (_) {
+        // A new account may not have completed its profile yet.
+      }
+      profile = {...profile, 'phone': currentUser['phone']};
 
       if (!mounted) return;
 
@@ -174,6 +205,8 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
         _providers = providers;
         _requests = requests;
         _currentUserId = currentUser['id'] as int?;
+        _profile = profile;
+        _earnings = earnings;
       });
     } catch (error) {
       if (mounted) {
@@ -193,10 +226,14 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
   Future<void> _showRequestForm(Map<String, dynamic> provider) async {
     final formKey = GlobalKey<FormState>();
     final title = TextEditingController(text: _requestTitleLabel);
-    final details = TextEditingController();
-    final sport = TextEditingController();
-    final region = TextEditingController(text: _regionController.text.trim());
-    final phone = TextEditingController();
+    final quickOptions = _quickRequestOptions[_category] ?? const ['Үйлчилгээ авах хүсэлт'];
+    final details = TextEditingController(text: quickOptions.first);
+    final savedSport = _profile['sport']?.toString() ?? '';
+    final sport = TextEditingController(text: _sportOptions.contains(savedSport) ? savedSport : '');
+    final region = TextEditingController(text: _profile['region']?.toString().isNotEmpty == true ? _profile['region'].toString() : _regionController.text.trim());
+    final phone = TextEditingController(
+      text: _category == 'sports_store' ? '' : (_profile['phone']?.toString() ?? ''),
+    );
     final preferredDate = TextEditingController();
     final extraValues = {for (final label in _requestFields) label: TextEditingController()};
 
@@ -220,17 +257,18 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
                         : null,
                   ),
                   const SizedBox(height: 10),
-                  TextFormField(
-                    controller: details,
-                    minLines: 3,
-                    maxLines: 5,
+                  DropdownButtonFormField<String>(
+                    value: quickOptions.contains(details.text) ? details.text : quickOptions.first,
+                    isExpanded: true,
                     decoration: InputDecoration(
-                      labelText: 'Дэлгэрэнгүй хүсэлт',
-                      hintText: _requestPrompts[_category],
+                      labelText: 'Хүсэлтийн төрлөө сонгоно уу',
+                      helperText: _requestPrompts[_category],
                     ),
-                    validator: (value) => (value ?? '').trim().length < 5
-                        ? 'Хүсэлтээ дэлгэрэнгүй бичнэ үү.'
-                        : null,
+                    items: quickOptions.map((option) => DropdownMenuItem(
+                      value: option,
+                      child: Text(option),
+                    )).toList(),
+                    onChanged: (value) => details.text = value ?? quickOptions.first,
                   ),
                   ...extraValues.entries.map((entry) => Padding(
                     padding: const EdgeInsets.only(top: 10),
@@ -240,35 +278,53 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
                     ),
                   )),
                   const SizedBox(height: 10),
-                  TextFormField(
-                    controller: sport,
-                    decoration: const InputDecoration(labelText: 'Спортын төрөл (заавал биш)'),
+                  DropdownButtonFormField<String>(
+                    value: _sportOptions.contains(sport.text) ? sport.text : null,
+                    isExpanded: true,
+                    decoration: const InputDecoration(labelText: 'Спортын төрөл (сонгох)'),
+                    items: _sportOptions.map((value) => DropdownMenuItem(value: value, child: Text(value))).toList(),
+                    onChanged: (value) => sport.text = value ?? '',
                   ),
                   const SizedBox(height: 10),
-                  TextFormField(
-                    controller: region,
+                  DropdownButtonFormField<String>(
+                    value: _regions.contains(region.text) ? region.text : null,
+                    isExpanded: true,
                     decoration: const InputDecoration(labelText: 'Аймаг / хот, дүүрэг'),
-                    validator: (value) => (value ?? '').trim().length < 2
-                        ? 'Байршлаа оруулна уу.'
-                        : null,
+                    items: _regions.map((value) => DropdownMenuItem(value: value, child: Text(value))).toList(),
+                    validator: (value) => (value ?? '').isEmpty ? 'Байршлаа сонгоно уу.' : null,
+                    onChanged: (value) => region.text = value ?? '',
                   ),
                   const SizedBox(height: 10),
                   TextFormField(
                     controller: preferredDate,
+                    readOnly: true,
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: dialogContext,
+                        initialDate: DateTime.now().add(const Duration(days: 1)),
+                        firstDate: DateTime.now(),
+                        lastDate: DateTime.now().add(const Duration(days: 365)),
+                      );
+                      if (picked != null) {
+                        preferredDate.text = '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+                      }
+                    },
                     decoration: const InputDecoration(
                       labelText: 'Хүссэн өдөр (заавал биш)',
-                      hintText: 'YYYY-MM-DD',
+                      prefixIcon: Icon(Icons.calendar_month),
+                      hintText: 'Дарж өдөр сонгоно уу',
                     ),
                   ),
                   const SizedBox(height: 10),
-                  TextFormField(
-                    controller: phone,
-                    keyboardType: TextInputType.phone,
-                    decoration: const InputDecoration(labelText: 'Холбоо барих утас'),
-                    validator: (value) => (value ?? '').trim().length < 8
-                        ? 'Утасны дугаараа зөв оруулна уу.'
-                        : null,
-                  ),
+                  if (_category != 'sports_store')
+                    TextFormField(
+                      controller: phone,
+                      keyboardType: TextInputType.phone,
+                      decoration: const InputDecoration(labelText: 'Холбоо барих утас'),
+                      validator: (value) => (value ?? '').trim().length < 8
+                          ? 'Утасны дугаараа зөв оруулна уу.'
+                          : null,
+                    ),
                 ],
               ),
             ),
@@ -348,7 +404,7 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
         'details': details,
         'sport': sport.isEmpty ? null : sport,
         'region': region,
-        'contact_phone': phone,
+        if (_category != 'sports_store') 'contact_phone': phone,
         'preferred_at': preferredDate.isEmpty
             ? null
             : DateTime.parse(preferredDate).toUtc().toIso8601String(),
@@ -382,8 +438,9 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
     final formKey = GlobalKey<FormState>();
     final name = TextEditingController();
     final description = TextEditingController();
-    final sport = TextEditingController();
-    final region = TextEditingController();
+    final savedSport = _profile['sport']?.toString() ?? '';
+    final sport = TextEditingController(text: _sportOptions.contains(savedSport) ? savedSport : '');
+    final region = TextEditingController(text: _profile['region']?.toString() ?? '');
     final price = TextEditingController(text: '0');
     final credentials = TextEditingController();
     final extraValues = {for (final label in _providerFields) label: TextEditingController()};
@@ -418,17 +475,21 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
                         : null,
                   ),
                   const SizedBox(height: 10),
-                  TextFormField(
-                    controller: sport,
-                    decoration: const InputDecoration(labelText: 'Спортын төрөл (заавал биш)'),
+                  DropdownButtonFormField<String>(
+                    value: _sportOptions.contains(sport.text) ? sport.text : null,
+                    isExpanded: true,
+                    decoration: const InputDecoration(labelText: 'Спортын төрөл (сонгох)'),
+                    items: _sportOptions.map((value) => DropdownMenuItem(value: value, child: Text(value))).toList(),
+                    onChanged: (value) => sport.text = value ?? '',
                   ),
                   const SizedBox(height: 10),
-                  TextFormField(
-                    controller: region,
+                  DropdownButtonFormField<String>(
+                    value: _regions.contains(region.text) ? region.text : null,
+                    isExpanded: true,
                     decoration: const InputDecoration(labelText: 'Аймаг / хот, дүүрэг'),
-                    validator: (value) => (value ?? '').trim().length < 2
-                        ? 'Байршлаа оруулна уу.'
-                        : null,
+                    items: _regions.map((value) => DropdownMenuItem(value: value, child: Text(value))).toList(),
+                    validator: (value) => (value ?? '').isEmpty ? 'Байршлаа сонгоно уу.' : null,
+                    onChanged: (value) => region.text = value ?? '',
                   ),
                   const SizedBox(height: 10),
                   TextFormField(
@@ -633,8 +694,8 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
               children: [
                 CircleAvatar(
                   radius: 24,
-                  backgroundColor: const Color(0xFFEAF1FF),
-                  child: Icon(widget.service.icon, color: const Color(0xFF2878FF)),
+                  backgroundColor: const Color(0xFFF0ECFF),
+                  child: Icon(widget.service.icon, color: const Color(0xFF7043EA)),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -669,7 +730,7 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
             const SizedBox(height: 10),
             Text(
               _formatPrice(provider['price_from']),
-              style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF245FC7)),
+              style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF3478FF)),
             ),
             const SizedBox(height: 12),
             SizedBox(
@@ -684,6 +745,26 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
         ),
       ),
     );
+  }
+
+
+  Future<void> _payServiceRequest(int requestId) async {
+    final token = await _readToken();
+    if (token == null || token.isEmpty) return;
+    try {
+      await QPayPaymentDialog.open(
+        context: context, api: _api, token: token,
+        orderType: 'service_request', orderId: requestId,
+        onPaid: () {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Үйлчилгээний төлбөр баталгаажлаа.')));
+            _loadData();
+          }
+        },
+      );
+    } catch (error) {
+      if (mounted) setState(() => _error = error.toString());
+    }
   }
 
   Widget _buildRequestCard(Map<String, dynamic> request) {
@@ -762,7 +843,12 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
                   child: const Text('ХҮСЭЛТ ЦУЦЛАХ'),
                 ),
               ),
-            if ((isRequester || isProvider) && status == 'accepted')
+            if (isRequester && status == 'accepted' && request['payment_status'] == 'unpaid')
+              Align(alignment: Alignment.centerRight, child: FilledButton.icon(
+                onPressed: _saving ? null : () => _payServiceRequest(id),
+                icon: const Icon(Icons.qr_code_2), label: const Text('QPAY-ЭЭР ТӨЛӨХ'),
+              )),
+            if ((isRequester || isProvider) && status == 'accepted' && (request['payment_status'] == 'paid' || request['payment_status'] == 'free'))
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
@@ -775,6 +861,14 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
       ),
     );
   }
+
+  Widget _earningRow(String label, dynamic value) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 3),
+    child: Row(children: [
+      Expanded(child: Text(label)),
+      Text('${value ?? 0} ₮', style: const TextStyle(fontWeight: FontWeight.w800)),
+    ]),
+  );
 
   Widget _buildSearchFilters() {
     return Card(
@@ -799,14 +893,18 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
               ),
             ),
             const SizedBox(height: 10),
-            TextField(
-              controller: _regionController,
-              textInputAction: TextInputAction.search,
-              onSubmitted: (_) => _loadData(),
+            DropdownButtonFormField<String>(
+              value: _regions.contains(_regionController.text) ? _regionController.text : null,
+              isExpanded: true,
               decoration: const InputDecoration(
-                labelText: 'Аймаг / хот, дүүрэг',
+                labelText: 'Байршил (заавал биш)',
                 prefixIcon: Icon(Icons.location_on_outlined),
               ),
+              items: _regions.map((region) => DropdownMenuItem(value: region, child: Text(region))).toList(),
+              onChanged: (value) {
+                _regionController.text = value ?? '';
+                _loadData();
+              },
             ),
             const SizedBox(height: 10),
             SizedBox(
@@ -845,7 +943,7 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Color(0xFF101B36), Color(0xFF244B91)],
+                  colors: [Color(0xFF211052), Color(0xFF3157B8)],
                 ),
                 borderRadius: BorderRadius.circular(18),
               ),
@@ -870,6 +968,20 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
                 ],
               ),
             ),
+            if ((_earnings['transactions'] ?? 0) > 0)
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    const Text('МИНИЙ ҮЙЛЧИЛГЭЭНИЙ ОРЛОГО', style: TextStyle(fontWeight: FontWeight.w900)),
+                    const SizedBox(height: 8),
+                    _earningRow('Нийт төлбөр', _earnings['gross_paid_mnt']),
+                    _earningRow('5% шимтгэл', _earnings['commission_deducted_mnt']),
+                    _earningRow('Танд ногдох цэвэр орлого', _earnings['net_after_commission_and_refunds_mnt']),
+                    _earningRow('Буцаалт', _earnings['refunds_mnt']),
+                  ]),
+                ),
+              ),
             const SizedBox(height: 14),
             _buildSearchFilters(),
             const SizedBox(height: 14),
@@ -888,12 +1000,12 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
             if (_loading) const LinearProgressIndicator(),
             if (_error != null) ...[
               Card(
-                color: const Color(0xFFFFF3E8),
+                color: const Color(0xFFF3ECFF),
                 child: Padding(
                   padding: const EdgeInsets.all(14),
                   child: Text(
                     _error!,
-                    style: const TextStyle(color: Color(0xFF8A3B00)),
+                    style: const TextStyle(color: Color(0xFF6338D8)),
                   ),
                 ),
               ),

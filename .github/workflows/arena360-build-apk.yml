@@ -1,0 +1,53 @@
+name: ARENA 360 Android APK
+on:
+  push:
+    branches:
+      - feature/arena360-quality-hardening
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Generate Android platform
+        working-directory: apps/mobile
+        run: flutter create --platforms=android --project-name arena360 --org mn.arena360 .
+      - name: Install packages
+        working-directory: apps/mobile
+        run: flutter pub get
+      - name: Analyze Dart source
+        working-directory: apps/mobile
+        run: flutter analyze --no-fatal-infos
+      - name: Run Flutter tests
+        working-directory: apps/mobile
+        run: flutter test
+      - name: Build universal release APK
+        working-directory: apps/mobile
+        run: flutter build apk --release --dart-define=API_BASE_URL=https://YOUR_API_HOST/api/v1
+      - name: Verify APK archive
+        working-directory: apps/mobile
+        run: |
+          APK=build/app/outputs/flutter-apk/app-release.apk
+          test -s "$APK"
+          unzip -t "$APK"
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ARENA360-ANDROID-RELEASE-APK
+          path: apps/mobile/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+          retention-days: 14

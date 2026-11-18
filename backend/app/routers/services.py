@@ -67,6 +67,7 @@ def _request_output(item: ServiceRequest) -> ServiceRequestResponse:
         preferred_at=item.preferred_at,
         contact_phone=item.contact_phone,
         status=item.status,
+        payment_status=item.payment_status,
         response_note=item.response_note,
         created_at=item.created_at,
         updated_at=item.updated_at,
@@ -198,6 +199,16 @@ def create_service_request(
             raise HTTPException(status_code=404, detail="Баталгаажсан үйлчилгээ үзүүлэгч олдсонгүй.")
         if provider.user_id == user.id:
             raise HTTPException(status_code=400, detail="Өөрийн үйлчилгээ рүү хүсэлт илгээх боломжгүй.")
+    contact_phone = (
+        (user.phone or "").strip()
+        if payload.category == "sports_store"
+        else (payload.contact_phone or "").strip()
+    )
+    if len(contact_phone) < 8:
+        raise HTTPException(
+            status_code=422,
+            detail="Профайлдаа бүртгэлтэй утасны дугаараа баталгаажуулна уу.",
+        )
     item = ServiceRequest(
         requester_id=user.id,
         provider_user_id=provider.user_id if provider else None,
@@ -207,7 +218,7 @@ def create_service_request(
         sport=payload.sport,
         region=payload.region,
         preferred_at=payload.preferred_at,
-        contact_phone=payload.contact_phone,
+        contact_phone=contact_phone,
         status="pending",
     )
     db.add(item)
@@ -246,6 +257,13 @@ def respond_to_service_request(
         raise HTTPException(status_code=409, detail="Зөвхөн хүлээгдэж буй хүсэлтэд хариу өгнө.")
     item.status = "accepted" if payload.accepted else "rejected"
     item.response_note = payload.note
+    if payload.accepted:
+        provider = db.query(ServiceProvider).filter_by(
+            user_id=user.id, category=item.category, verification_status="verified"
+        ).first()
+        if provider is None:
+            raise HTTPException(status_code=409, detail="Баталгаажсан үйлчилгээ үзүүлэгчийн үнэ олдсонгүй.")
+        item.payment_status = "unpaid" if provider.price_from > 0 else "free"
     db.commit()
     db.refresh(item)
     return _request_output(item)
@@ -283,6 +301,8 @@ def complete_service_request(
         raise HTTPException(status_code=403, detail="Энэ хүсэлтийг дуусгах эрхгүй.")
     if item.status != "accepted":
         raise HTTPException(status_code=409, detail="Зөвхөн зөвшөөрсөн хүсэлтийг дуусгана.")
+    if item.payment_status not in {"paid", "free"}:
+        raise HTTPException(status_code=409, detail="Үйлчилгээний төлбөр баталгаажаагүй байна.")
     item.status = "completed"
     db.commit()
     db.refresh(item)

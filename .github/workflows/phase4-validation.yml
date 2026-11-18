@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feature/arena360-phase4-ecosystem
+      - feature/arena360-quality-hardening
     paths:
       - "backend/**"
       - "apps/mobile/**"
@@ -14,6 +15,10 @@ on:
       - "apps/mobile/**"
       - ".github/workflows/phase4-validation.yml"
   workflow_dispatch:
+
+concurrency:
+  group: arena360-phase4-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -48,7 +53,7 @@ jobs:
           java-version: "17"
       - uses: subosito/flutter-action@v2
         with:
-          channel: stable
+          flutter-version: "3.35.7"
           cache: true
       - name: Generate Android platform
         working-directory: apps/mobile
@@ -67,6 +72,28 @@ jobs:
       - name: Run Flutter widget tests
         working-directory: apps/mobile
         run: flutter test
+      - name: Build x86_64 debug APK for emulator
+        working-directory: apps/mobile
+        run: flutter build apk --debug --target-platform android-x64
+      - name: Install and launch on Android 14 emulator
+        continue-on-error: true
+        timeout-minutes: 12
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          profile: pixel_6
+          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
+          disable-animations: true
+          script: |
+            adb install apps/mobile/build/app/outputs/flutter-apk/app-debug.apk
+            adb shell am start -n mn.arena360.arena360/.MainActivity
+            sleep 5
+            test -n "$(adb shell pidof mn.arena360.arena360)"
+            if adb logcat -d -s AndroidRuntime:E | grep -q "FATAL EXCEPTION"; then
+              echo "Android app crashed during emulator launch."
+              exit 1
+            fi
       - name: Build ARM64 release APK
         working-directory: apps/mobile
         run: flutter build apk --release --target-platform android-arm64

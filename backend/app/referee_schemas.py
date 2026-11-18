@@ -40,7 +40,7 @@ class RefereeBookingInput(BaseModel):
     transport_fee: int = Field(default=0, ge=0, le=100_000_000)
     food_fee: int = Field(default=0, ge=0, le=100_000_000)
     contact_name: str = Field(min_length=2, max_length=120)
-    contact_phone: str = Field(min_length=8, max_length=24)
+    contact_phone: str | None = Field(default=None, min_length=8, max_length=24)
     notes: str | None = Field(default=None, max_length=2000)
 
     @field_validator("event_at")
@@ -71,9 +71,10 @@ class RefereeBookingOutput(BaseModel):
     food_fee: int
     total_amount: int
     contact_name: str
-    contact_phone: str
+    contact_phone: str | None
     notes: str | None
     status: str
+    payment_status: str = "unpaid"
     created_at: datetime
 
 

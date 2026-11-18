@@ -5,7 +5,7 @@ from sqlalchemy import engine_from_config, pool
 
 from app.config import get_settings
 from app.database import Base
-from app import models, referee_models, service_models, venue_models, tournament_models, ecosystem_models  # noqa: F401
+from app import models, referee_models, service_models, venue_models, tournament_models, ecosystem_models, payment_models, qpay_models  # noqa: F401
 
 config = context.config
 if config.config_file_name:

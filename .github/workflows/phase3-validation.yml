@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feature/arena360-tournament-module
+      - feature/arena360-quality-hardening
     paths:
       - "backend/**"
       - "apps/mobile/**"
@@ -14,6 +15,10 @@ on:
       - "apps/mobile/**"
       - ".github/workflows/phase3-validation.yml"
   workflow_dispatch:
+
+concurrency:
+  group: arena360-phase3-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -48,7 +53,7 @@ jobs:
           java-version: "17"
       - uses: subosito/flutter-action@v2
         with:
-          channel: stable
+          flutter-version: "3.35.7"
           cache: true
       - name: Generate Android platform
         working-directory: apps/mobile

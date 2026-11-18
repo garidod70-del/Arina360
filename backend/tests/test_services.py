@@ -110,9 +110,38 @@ def test_service_provider_verification_and_request_lifecycle():
         assert accepted.status_code == 200
         assert accepted.json()["status"] == "accepted"
 
+        with SessionLocal() as db:
+            from app.service_models import ServiceRequest
+            service_request = db.get(ServiceRequest, request_id)
+            service_request.payment_status = "paid"  # simulate a verified gateway settlement
+            db.commit()
+
         completed = client.post(
             f"/api/v1/services/requests/{request_id}/complete",
             headers=requester_headers,
         )
         assert completed.status_code == 200
         assert completed.json()["status"] == "completed"
+
+
+def test_sports_store_request_uses_registered_phone_without_manual_input():
+    import uuid
+
+    with TestClient(app) as client:
+        suffix = str(uuid.uuid4().int % 100000000).zfill(8)
+        phone = f"+97672{suffix}"
+        registered = client.post("/api/v1/auth/register", json={
+            "phone": phone, "password": "secure-test-password",
+        })
+        assert registered.status_code == 201, registered.text
+        headers = {"Authorization": f"Bearer {registered.json()['access_token']}"}
+
+        request = client.post("/api/v1/services/requests", headers=headers, json={
+            "category": "sports_store",
+            "title": "Спорт бараа захиалах",
+            "details": "Жүдо бэлтгэлийн өмсгөл захиалах хүсэлтэй.",
+            "region": "Улаанбаатар",
+        })
+        assert request.status_code == 201, request.text
+        assert request.json()["contact_phone"] == phone
+

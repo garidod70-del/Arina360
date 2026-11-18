@@ -32,7 +32,7 @@ def _booking_out(item: RefereeBooking) -> RefereeBookingOutput:
         venue=item.venue, referee_count=item.referee_count, payment_type=item.payment_type,
         unit_fee=item.unit_fee, work_days=item.work_days, transport_fee=item.transport_fee,
         food_fee=item.food_fee, total_amount=total, contact_name=item.contact_name,
-        contact_phone=item.contact_phone, notes=item.notes, status=item.status, created_at=item.created_at,
+        contact_phone=item.contact_phone, notes=item.notes, status=item.status, payment_status=item.payment_status, created_at=item.created_at,
     )
 
 
@@ -101,7 +101,12 @@ def create_request(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    item = RefereeBooking(requester_id=user.id, **payload.model_dump(), status="pending")
+    multiplier = payload.work_days if payload.payment_type == "Нэг өдрөөр" else 1
+    amount = payload.referee_count * payload.unit_fee * multiplier + payload.transport_fee + payload.food_fee
+    item = RefereeBooking(
+        requester_id=user.id, **payload.model_dump(), status="pending",
+        payment_status="unpaid" if amount > 0 else "free",
+    )
     db.add(item)
     db.commit()
     db.refresh(item)
@@ -168,6 +173,8 @@ def complete_assignment(
         raise HTTPException(status_code=403, detail="Энэ захиалгыг дуусгах эрхгүй.")
     if item.status != "accepted":
         raise HTTPException(status_code=409, detail="Зөвхөн зөвшөөрсөн томилгоог дуусгана.")
+    if item.payment_status not in {"paid", "free"}:
+        raise HTTPException(status_code=409, detail="Шүүгчийн үйлчилгээний төлбөр баталгаажаагүй байна.")
     item.status = "completed"
     db.commit()
     db.refresh(item)

@@ -3,6 +3,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../../core/config/api_config.dart';
 import '../../core/network/api_client.dart';
+import '../../core/widgets/qpay_payment_dialog.dart';
 
 class ApiRefereeBookingPage extends StatefulWidget {
   const ApiRefereeBookingPage({super.key});
@@ -16,7 +17,6 @@ class _ApiRefereeBookingPageState extends State<ApiRefereeBookingPage> {
   final _api = ApiClient();
   final _venue = TextEditingController();
   final _contactName = TextEditingController();
-  final _contactPhone = TextEditingController();
   final _fee = TextEditingController(text: '50000');
   final _count = TextEditingController(text: '1');
   final _notes = TextEditingController();
@@ -30,6 +30,7 @@ class _ApiRefereeBookingPageState extends State<ApiRefereeBookingPage> {
   List<Map<String, dynamic>> _requests = [];
   List<Map<String, dynamic>> _referees = [];
   int? _selectedRefereeId;
+  int? _currentUserId;
 
   @override
   void initState() {
@@ -42,7 +43,6 @@ class _ApiRefereeBookingPageState extends State<ApiRefereeBookingPage> {
     _api.close();
     _venue.dispose();
     _contactName.dispose();
-    _contactPhone.dispose();
     _fee.dispose();
     _count.dispose();
     _notes.dispose();
@@ -64,10 +64,20 @@ class _ApiRefereeBookingPageState extends State<ApiRefereeBookingPage> {
         _api.getList('/referees/requests/me', token: token),
         _api.getList('/referees', token: token),
       ]);
+      Map<String, dynamic> profile = {};
+      Map<String, dynamic> account = {};
+      try { profile = await _api.get('/profile/me', token: token); } catch (_) {}
+      try { account = await _api.get('/auth/me', token: token); } catch (_) {}
       if (!mounted) return;
+      if (_contactName.text.isEmpty) {
+        _contactName.text = profile['full_name']?.toString() ?? profile['name']?.toString() ?? '';
+      }
+      final savedSport = profile['sport']?.toString();
+      if (_sports.contains(savedSport)) _sport = savedSport!;
       setState(() {
         _requests = results[0];
         _referees = results[1];
+        _currentUserId = account['id'] as int?;
         if (_selectedRefereeId == null && _referees.isNotEmpty) _selectedRefereeId = _referees.first['user_id'] as int;
       });
     } catch (e) {
@@ -99,7 +109,6 @@ class _ApiRefereeBookingPageState extends State<ApiRefereeBookingPage> {
         'transport_fee': 0,
         'food_fee': 0,
         'contact_name': _contactName.text.trim(),
-        'contact_phone': _contactPhone.text.trim(),
         'notes': _notes.text.trim().isEmpty ? null : _notes.text.trim(),
       });
       if (!mounted) return;
@@ -130,6 +139,26 @@ class _ApiRefereeBookingPageState extends State<ApiRefereeBookingPage> {
       if (mounted) setState(() => _error = e.toString());
     } finally {
       if (mounted) setState(() => _busy = false);
+    }
+  }
+
+
+  Future<void> _payReferee(int id) async {
+    final token = await _token();
+    if (token == null) return;
+    try {
+      await QPayPaymentDialog.open(
+        context: context, api: _api, token: token,
+        orderType: 'referee_booking', orderId: id,
+        onPaid: () {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Шүүгчийн төлбөр баталгаажлаа.')));
+            _load();
+          }
+        },
+      );
+    } catch (error) {
+      if (mounted) setState(() => _error = error.toString());
     }
   }
 
@@ -231,7 +260,6 @@ class _ApiRefereeBookingPageState extends State<ApiRefereeBookingPage> {
                 Expanded(child: _field('Нэгж үнэ (₮)', _fee, number: true)),
               ]),
               _field('Холбоо барих хүний нэр', _contactName),
-              _field('Холбоо барих утас', _contactPhone, number: true),
               _field('Нэмэлт тайлбар', _notes, maxLines: 2),
               FilledButton.icon(onPressed: _busy ? null : _createRequest, icon: const Icon(Icons.send), label: const Text('ЗАХИАЛГА ИЛГЭЭХ')),
             ])),
@@ -249,13 +277,14 @@ class _ApiRefereeBookingPageState extends State<ApiRefereeBookingPage> {
               Text('${item['venue']} • ${item['event_at']}'),
               Text('Дүн: ${item['total_amount']} ₮ • Төлөв: $status'),
               if (status == 'pending') TextButton(onPressed: _busy ? null : () => _action(id, 'assign', sport: item['sport']?.toString()), child: const Text('Тохирох шүүгчид томилох')),
-              if (status == 'assigned') TextButton(onPressed: _busy ? null : () => _action(id, 'accept'), child: const Text('Томилгоо зөвшөөрөх')),
-              if (status == 'accepted') TextButton(onPressed: _busy ? null : () => _action(id, 'complete'), child: const Text('Ажил дууссан гэж тэмдэглэх')),
+              if ((status == 'assigned' || status == 'accepted') && item['requester_id'] == _currentUserId && item['payment_status'] == 'unpaid') TextButton(onPressed: _busy ? null : () => _payReferee(id), child: const Text('QPay-ээр төлөх')),
+              if (status == 'assigned' && item['referee_user_id'] == _currentUserId) TextButton(onPressed: _busy ? null : () => _action(id, 'accept'), child: const Text('Томилгоо зөвшөөрөх')),
+              if (status == 'accepted' && (item['payment_status'] == 'paid' || item['payment_status'] == 'free')) TextButton(onPressed: _busy ? null : () => _action(id, 'complete'), child: const Text('Ажил дууссан гэж тэмдэглэх')),
               if (status == 'completed' && item['referee_user_id'] != null) TextButton(onPressed: _busy ? null : () => _rate(id), child: const Text('Шүүгчид үнэлгээ өгөх')),
             ])));
           }),
           const SizedBox(height: 16),
-          const Text('Тайлбар: Захиалгын үнийн дүн нь урьдчилсан тооцоо. Онлайн төлбөр хараахан холбогдоогүй.', style: TextStyle(fontSize: 12, color: Colors.blueGrey)),
+          const Text('Тайлбар: Шүүгч томилогдсоны дараа захиалагч QPay-ээр төлбөрөө баталгаажуулна.', style: TextStyle(fontSize: 12, color: Colors.blueGrey)),
         ]),
       ),
     );
