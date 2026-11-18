@@ -66,6 +66,8 @@ void main() {
 
     await tester.pageBack();
     await tester.pumpAndSettle();
+    await tester.drag(find.byType(ListView).first, const Offset(0, -700));
+    await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('Шүүгч'));
     await tester.tap(find.text('Шүүгч'));
     await tester.pumpAndSettle();
