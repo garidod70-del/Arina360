@@ -65,7 +65,7 @@ void main() {
     expect(tester.takeException(), isNull);
 
     await tester.tap(find.text('Спорт барааны дэлгүүр'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 800));
     expect(
       find.descendant(
         of: find.byType(AppBar),
@@ -81,7 +81,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('Мэдэгдэл, чат'));
     await tester.tap(find.text('Мэдэгдэл, чат'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 800));
     expect(
       find.descendant(
         of: find.byType(AppBar),
