@@ -25,6 +25,7 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
   int? _currentUserId;
   Map<String, dynamic> _profile = {};
   static const _sportOptions = <String>['Жүдо', 'Самбо', 'Чөлөөт бөх', 'Үндэсний бөх', 'Бокс', 'Волейбол', 'Сагсан бөмбөг', 'Хөл бөмбөг', 'Таеквондо', 'Каратэ', 'Гимнастик', 'Бусад'];
+  static const _regions = <String>['Улаанбаатар', 'Архангай', 'Баян-Өлгий', 'Баянхонгор', 'Булган', 'Говь-Алтай', 'Говьсүмбэр', 'Дархан-Уул', 'Дорноговь', 'Дорнод', 'Дундговь', 'Завхан', 'Орхон', 'Өвөрхангай', 'Өмнөговь', 'Сүхбаатар', 'Сэлэнгэ', 'Төв', 'Увс', 'Ховд', 'Хөвсгөл', 'Хэнтий'];
   bool _loading = false;
   bool _saving = false;
   String? _error;
@@ -272,12 +273,13 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
                     onChanged: (value) => sport.text = value ?? '',
                   ),
                   const SizedBox(height: 10),
-                  TextFormField(
-                    controller: region,
+                  DropdownButtonFormField<String>(
+                    value: _regions.contains(region.text) ? region.text : null,
+                    isExpanded: true,
                     decoration: const InputDecoration(labelText: 'Аймаг / хот, дүүрэг'),
-                    validator: (value) => (value ?? '').trim().length < 2
-                        ? 'Байршлаа оруулна уу.'
-                        : null,
+                    items: _regions.map((value) => DropdownMenuItem(value: value, child: Text(value))).toList(),
+                    validator: (value) => (value ?? '').isEmpty ? 'Байршлаа сонгоно уу.' : null,
+                    onChanged: (value) => region.text = value ?? '',
                   ),
                   const SizedBox(height: 10),
                   TextFormField(
@@ -467,12 +469,13 @@ class _ServiceMarketplacePageState extends State<ServiceMarketplacePage> {
                     onChanged: (value) => sport.text = value ?? '',
                   ),
                   const SizedBox(height: 10),
-                  TextFormField(
-                    controller: region,
+                  DropdownButtonFormField<String>(
+                    value: _regions.contains(region.text) ? region.text : null,
+                    isExpanded: true,
                     decoration: const InputDecoration(labelText: 'Аймаг / хот, дүүрэг'),
-                    validator: (value) => (value ?? '').trim().length < 2
-                        ? 'Байршлаа оруулна уу.'
-                        : null,
+                    items: _regions.map((value) => DropdownMenuItem(value: value, child: Text(value))).toList(),
+                    validator: (value) => (value ?? '').isEmpty ? 'Байршлаа сонгоно уу.' : null,
+                    onChanged: (value) => region.text = value ?? '',
                   ),
                   const SizedBox(height: 10),
                   TextFormField(
