@@ -2,6 +2,13 @@
 
 Import the repository into Render and apply the root `render.yaml` Blueprint. Render provisions the Docker web service and PostgreSQL database and assigns a managed HTTPS URL. During Blueprint setup, fill the prompted `CORS_ORIGINS`, `QPAY_CLIENT_ID`, `QPAY_CLIENT_SECRET`, `QPAY_INVOICE_CODE`, and `QPAY_CALLBACK_URL` values. Use only your real QPay Merchant V2 production credentials; never commit or send them in chat. Set `CORS_ORIGINS` to the exact HTTPS origin(s) of your web admin/client, comma-separated. Set `QPAY_CALLBACK_URL` to the public API origin, e.g. `https://YOUR-SERVICE.onrender.com` (no path). The Blueprint pins `QPAY_BASE_URL` to the production merchant host. The container applies Alembic migrations before starting the API.
 
+## Payments, seller alerts, and provider settlement
+
+- QPay payment confirmation is server-side. The app records the 5% platform commission and 95% provider net only after QPay confirms a successful MNT payment.
+- Store sellers receive an in-app order notification after payment confirmation. It includes the buyer's registered account phone number and delivery details; the checkout does not ask the buyer to type a phone number.
+- SMS and operating-system push notifications are not activated by this repository configuration. They require an SMS gateway account/API credentials and Firebase project configuration (Android app registration and google-services.json) before they can be sent.
+- Provider net earnings are recorded in the payment allocation ledger and displayed in provider/admin reports. Automatic bank payouts are not enabled: a supported bank/disbursement API, merchant authorization, beneficiary account verification, and settlement credentials must be supplied before money can be transferred automatically. Do not treat a ledger balance as a completed bank transfer.
+- Never put QPay, SMS, Firebase, bank, or signing secrets in source control or chat. Store them in the corresponding deployment secret manager.
 ## Verify deployment
 Open `https://YOUR-SERVICE.onrender.com/health`; expected response:
 ```json
