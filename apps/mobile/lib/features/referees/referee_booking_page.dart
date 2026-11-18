@@ -281,9 +281,9 @@ class _ApiRefereeBookingPageState extends State<ApiRefereeBookingPage> {
               Text('${item['venue']} • ${item['event_at']}'),
               Text('Дүн: ${item['total_amount']} ₮ • Төлөв: $status'),
               if (status == 'pending') TextButton(onPressed: _busy ? null : () => _action(id, 'assign', sport: item['sport']?.toString()), child: const Text('Тохирох шүүгчид томилох')),
-              if (status == 'assigned' && item['requester_id'] == _currentUserId && item['payment_status'] != 'paid') TextButton(onPressed: _busy ? null : () => _payReferee(id), child: const Text('QPay-ээр төлөх')),
+              if ((status == 'assigned' || status == 'accepted') && item['requester_id'] == _currentUserId && item['payment_status'] == 'unpaid') TextButton(onPressed: _busy ? null : () => _payReferee(id), child: const Text('QPay-ээр төлөх')),
               if (status == 'assigned' && item['referee_user_id'] == _currentUserId) TextButton(onPressed: _busy ? null : () => _action(id, 'accept'), child: const Text('Томилгоо зөвшөөрөх')),
-              if (status == 'accepted') TextButton(onPressed: _busy ? null : () => _action(id, 'complete'), child: const Text('Ажил дууссан гэж тэмдэглэх')),
+              if (status == 'accepted' && (item['payment_status'] == 'paid' || item['payment_status'] == 'free')) TextButton(onPressed: _busy ? null : () => _action(id, 'complete'), child: const Text('Ажил дууссан гэж тэмдэглэх')),
               if (status == 'completed' && item['referee_user_id'] != null) TextButton(onPressed: _busy ? null : () => _rate(id), child: const Text('Шүүгчид үнэлгээ өгөх')),
             ])));
           }),
