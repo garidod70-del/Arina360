@@ -446,7 +446,7 @@ class _CompetitionDetailPageState extends State<CompetitionDetailPage> {
       ]);
       if (!mounted) return;
       setState(() {
-        _tournament = result[0];
+        _tournament = result[0] as Map<String, dynamic>;
         _participants = result[1] as List<Map<String, dynamic>>;
         _matches = result[2] as List<Map<String, dynamic>>;
       });
