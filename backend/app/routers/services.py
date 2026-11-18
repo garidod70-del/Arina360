@@ -67,6 +67,7 @@ def _request_output(item: ServiceRequest) -> ServiceRequestResponse:
         preferred_at=item.preferred_at,
         contact_phone=item.contact_phone,
         status=item.status,
+        payment_status=item.payment_status,
         response_note=item.response_note,
         created_at=item.created_at,
         updated_at=item.updated_at,
