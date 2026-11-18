@@ -25,7 +25,7 @@ class PaymentTransaction(Base):
     order_id: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
     category: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
     buyer_user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"), nullable=False, index=True)
-    provider_user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"), nullable=False, index=True)
+    provider_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"), nullable=True, index=True)
     gross_amount: Mapped[int] = mapped_column(Integer, nullable=False)
     commission_rate_bps: Mapped[int] = mapped_column(Integer, nullable=False, default=500)
     commission_amount: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -35,6 +35,23 @@ class PaymentTransaction(Base):
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="paid", index=True)
     paid_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False)
+
+
+class PaymentAllocation(Base):
+    __tablename__ = "payment_allocations"
+    __table_args__ = (
+        UniqueConstraint("payment_id", "provider_user_id", name="uq_payment_allocation_provider"),
+        CheckConstraint("gross_amount > 0", name="ck_allocation_gross_positive"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    payment_id: Mapped[int] = mapped_column(ForeignKey("payment_transactions.id", ondelete="RESTRICT"), nullable=False, index=True)
+    provider_user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"), nullable=False, index=True)
+    gross_amount: Mapped[int] = mapped_column(Integer, nullable=False)
+    commission_amount: Mapped[int] = mapped_column(Integer, nullable=False)
+    provider_net_amount: Mapped[int] = mapped_column(Integer, nullable=False)
+    refunded_amount: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    refunded_commission: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
 
 class CommissionLedger(Base):
