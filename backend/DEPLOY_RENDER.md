@@ -27,3 +27,27 @@ Set GitHub Actions repository variable `ARENA_API_BASE_URL` (not a secret) to th
 
 ## Deployment boundary
 Repository code cannot create a Render account, accept its terms, select a paid plan, or approve the service on the owner's behalf. The owner must import/apply the Blueprint once. The included free database is for initial smoke testing only and may expire; use a persistent database plan before public production. The API records an administrator's licence check; it does not independently query the federation registry.
+
+
+## Production environment checklist
+
+Set these values in the Render service's Environment settings. Never commit real credentials to Git:
+
+- `APP_ENV=production`
+- `DATABASE_URL`: persistent managed PostgreSQL connection string
+- `JWT_SECRET`: unique random secret with at least 32 characters
+- `AUTO_CREATE_TABLES=false` (the deploy command applies Alembic migrations)
+- `CORS_ORIGINS`: comma-separated HTTPS origins for the deployed clients only
+- `QPAY_BASE_URL=https://merchant.qpay.mn`
+- `QPAY_CLIENT_ID`, `QPAY_CLIENT_SECRET`, and `QPAY_INVOICE_CODE`: issued by the QPay merchant account
+- `QPAY_CALLBACK_URL`: the public HTTPS API origin without a path, e.g. `https://YOUR-SERVICE.onrender.com`
+
+The API intentionally refuses production startup when the database, JWT, CORS, or QPay production settings are unsafe or incomplete. The QPay callback is `/api/v1/payments/qpay/callback/{sender_invoice_no}`; it must be reachable over HTTPS from QPay.
+
+## Settlement, notifications, and external credentials
+
+- A verified successful payment records the gross amount, the 5% platform commission, and the provider's 95% net allocation in the payment ledger. Duplicate settlement events are idempotent; refunds reverse the commission proportionally.
+- The current seller/customer notifications are in-app database notifications. They are not SMS or push notifications. To send SMS, choose an SMS gateway and configure its API credentials and sender identity. To deliver push notifications, configure an FCM project and mobile app registration. No provider credentials are stored in this repository.
+- Provider net amounts are recorded as payable ledger balances only. Automatic bank transfers are not active. They require a supported bank/payment payout API, merchant approval, provider bank-account verification, and an agreed payout schedule. Do not treat a ledger allocation as a completed bank transfer.
+- Until these external services are configured and their live callbacks/transfers are tested, keep the app in a controlled pilot and reconcile payouts manually.
+
