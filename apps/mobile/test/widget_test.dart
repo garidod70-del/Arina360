@@ -11,7 +11,7 @@ void main() {
       ),
       findsOneWidget,
     );
-    expect(find.text('ONE PLATFORM. ALL SPORTS.'), findsOneWidget);
+    expect(find.text('SPORT • CONNECT • GROW'), findsOneWidget);
     expect(find.text('Нэвтрэх'), findsOneWidget);
   });
 }
