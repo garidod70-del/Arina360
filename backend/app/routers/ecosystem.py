@@ -610,3 +610,109 @@ def update_seller_order_status(order_id: int, payload: OrderStatusInput,
     _notify(db, order.user_id, "Захиалгын төлөв шинэчлэгдлээ", f"Захиалга #{order.id}: {payload.status}", "order")
     db.commit()
     return {"id": order.id, "status": order.status}
+
+
+class ClubUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=2, max_length=140)
+    sport: str | None = Field(default=None, min_length=2, max_length=80)
+    region: str | None = Field(default=None, min_length=2, max_length=120)
+    description: str | None = Field(default=None, max_length=3000)
+    contact_phone: str | None = Field(default=None, min_length=8, max_length=24)
+
+
+class MembershipRoleInput(BaseModel):
+    role: str = Field(pattern="^(athlete|coach|manager)$")
+
+
+class ProductUpdate(BaseModel):
+    title: str | None = Field(default=None, min_length=2, max_length=160)
+    description: str | None = Field(default=None, max_length=3000)
+    category: str | None = Field(default=None, min_length=2, max_length=80)
+    price: int | None = Field(default=None, ge=0, le=2_000_000_000)
+    stock: int | None = Field(default=None, ge=0, le=1_000_000)
+    active: bool | None = None
+
+
+@router.patch("/clubs/{club_id}")
+def update_club(club_id: int, payload: ClubUpdate,
+                user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    club = _club_or_404(db, club_id)
+    if not _can_manage_club(club, user):
+        raise HTTPException(status_code=403, detail="Клубын эзэмшигч эсвэл админ шаардлагатай.")
+    for key, value in payload.model_dump(exclude_unset=True).items():
+        if isinstance(value, str):
+            value = value.strip()
+        setattr(club, key, value)
+    club.verification_status = "pending"
+    db.commit()
+    db.refresh(club)
+    return {"id": club.id, "name": club.name, "sport": club.sport, "region": club.region,
+            "verification_status": club.verification_status}
+
+
+@router.post("/clubs/{club_id}/members/{membership_id}/role")
+def update_membership_role(club_id: int, membership_id: int, payload: MembershipRoleInput,
+                           user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    club = _club_or_404(db, club_id)
+    if not _can_manage_club(club, user):
+        raise HTTPException(status_code=403, detail="Клубын эзэмшигч эсвэл админ шаардлагатай.")
+    membership = db.query(ClubMembership).filter_by(id=membership_id, club_id=club.id, status="active").first()
+    if membership is None:
+        raise HTTPException(status_code=404, detail="Идэвхтэй гишүүн олдсонгүй.")
+    if membership.role == "owner":
+        raise HTTPException(status_code=409, detail="Клубын эзэмшигчийн эрхийг энэ үйлдлээр өөрчлөхгүй.")
+    membership.role = payload.role
+    db.commit()
+    return {"id": membership.id, "role": membership.role}
+
+
+@router.delete("/clubs/{club_id}/members/{membership_id}", status_code=204)
+def remove_club_member(club_id: int, membership_id: int,
+                       user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    club = _club_or_404(db, club_id)
+    if not _can_manage_club(club, user):
+        raise HTTPException(status_code=403, detail="Клубын эзэмшигч эсвэл админ шаардлагатай.")
+    membership = db.query(ClubMembership).filter_by(id=membership_id, club_id=club.id).first()
+    if membership is None:
+        raise HTTPException(status_code=404, detail="Гишүүн олдсонгүй.")
+    if membership.role == "owner":
+        raise HTTPException(status_code=409, detail="Клубын эзэмшигчийг устгах боломжгүй.")
+    db.delete(membership)
+    db.commit()
+    return None
+
+
+@router.get("/coaches/mine")
+def my_coach_profile(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    item = db.query(CoachProfile).filter_by(user_id=user.id).first()
+    if item is None:
+        raise HTTPException(status_code=404, detail="Дасгалжуулагчийн профайл үүсгээгүй байна.")
+    return {"id": item.id, "user_id": item.user_id, "club_id": item.club_id, "sport": item.sport,
+            "qualification": item.qualification, "experience_years": item.experience_years,
+            "specialties": item.specialties, "verification_status": item.verification_status}
+
+
+@router.patch("/store/products/{product_id}")
+def update_product(product_id: int, payload: ProductUpdate,
+                   user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    product = db.get(Product, product_id)
+    if product is None:
+        raise HTTPException(status_code=404, detail="Бараа олдсонгүй.")
+    if product.seller_id != user.id and not _admin(user):
+        raise HTTPException(status_code=403, detail="Зөвхөн барааны эзэмшигч засварлана.")
+    for key, value in payload.model_dump(exclude_unset=True).items():
+        setattr(product, key, value)
+    db.commit()
+    db.refresh(product)
+    return {"id": product.id, "title": product.title, "price": product.price,
+            "stock": product.stock, "active": product.active}
+
+
+@router.delete("/store/cart/{product_id}", status_code=204)
+def remove_cart_item(product_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    item = db.query(CartItem).filter_by(user_id=user.id, product_id=product_id).first()
+    if item is None:
+        raise HTTPException(status_code=404, detail="Сагсны бараа олдсонгүй.")
+    db.delete(item)
+    db.commit()
+    return None
