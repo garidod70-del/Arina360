@@ -33,7 +33,7 @@ def _booking_output(item: VenueBooking) -> VenueBookingOutput:
     return VenueBookingOutput(
         id=item.id, slot_id=item.slot_id, customer_id=item.customer_id,
         provider_user_id=item.provider_user_id, contact_phone=item.contact_phone,
-        purpose=item.purpose, status=item.status, created_at=item.created_at,
+        purpose=item.purpose, status=item.status, payment_status=item.payment_status, created_at=item.created_at,
     )
 
 
