@@ -59,7 +59,7 @@ class ServiceRequestInput(BaseModel):
     sport: str | None = Field(default=None, max_length=80)
     region: str = Field(min_length=2, max_length=120)
     preferred_at: datetime | None = None
-    contact_phone: str = Field(min_length=8, max_length=24)
+    contact_phone: str | None = Field(default=None, min_length=8, max_length=24)
 
     @field_validator("title", "details", "sport", "region", "contact_phone")
     @classmethod
