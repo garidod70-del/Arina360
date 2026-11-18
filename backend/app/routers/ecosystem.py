@@ -149,6 +149,8 @@ def my_clubs(user: User = Depends(get_current_user), db: Session = Depends(get_d
 @router.post("/clubs/{club_id}/join", status_code=201)
 def join_club(club_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     club = _club_or_404(db, club_id)
+    if club.verification_status != "verified":
+        raise HTTPException(status_code=409, detail="Зөвхөн баталгаажсан клубт элсэх хүсэлт илгээнэ.")
     existing = db.query(ClubMembership).filter_by(club_id=club.id, user_id=user.id).first()
     if existing:
         raise HTTPException(status_code=409, detail="Та энэ клубт хүсэлт илгээсэн эсвэл гишүүн болсон байна.")
