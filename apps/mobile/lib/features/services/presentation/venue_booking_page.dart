@@ -73,7 +73,15 @@ class _VenueBookingPageState extends State<VenueBookingPage> {
   }
 
   Future<void> _book(Map<String, dynamic> slot) async {
-    final phone = TextEditingController();
+    var savedPhone = '';
+    try {
+      final token = await _token();
+      if (token != null && token.isNotEmpty) {
+        final profile = await _api.get('/profile/me', token: token);
+        savedPhone = profile['phone']?.toString() ?? '';
+      }
+    } catch (_) {}
+    final phone = TextEditingController(text: savedPhone);
     final purpose = TextEditingController();
     final ok = await showDialog<bool>(
       context: context,
@@ -298,14 +306,24 @@ class _VenueBookingPageState extends State<VenueBookingPage> {
               leading: const Icon(Icons.tune),
               title: const Text('Байршлаар нарийвчлан шүүх'),
               children: [
-                TextField(
-                  controller: _region,
-                  textInputAction: TextInputAction.search,
-                  onSubmitted: (_) => _load(),
+                DropdownButtonFormField<String>(
+                  value: _region.text.isEmpty ? null : _region.text,
+                  isExpanded: true,
                   decoration: const InputDecoration(
-                    labelText: 'Аймаг / хот, дүүрэг',
+                    labelText: 'Байршил (заавал биш)',
                     prefixIcon: Icon(Icons.location_on_outlined),
                   ),
+                  items: const [
+                    'Улаанбаатар', 'Архангай', 'Баян-Өлгий', 'Баянхонгор',
+                    'Булган', 'Говь-Алтай', 'Говьсүмбэр', 'Дархан-Уул',
+                    'Дорноговь', 'Дорнод', 'Дундговь', 'Завхан',
+                    'Орхон', 'Өвөрхангай', 'Өмнөговь', 'Сүхбаатар',
+                    'Сэлэнгэ', 'Төв', 'Увс', 'Ховд', 'Хөвсгөл', 'Хэнтий',
+                  ].map((region) => DropdownMenuItem(value: region, child: Text(region))).toList(),
+                  onChanged: (value) {
+                    _region.text = value ?? '';
+                    _load();
+                  },
                 ),
               ],
             ),
