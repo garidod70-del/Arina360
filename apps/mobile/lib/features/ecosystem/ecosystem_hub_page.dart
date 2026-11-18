@@ -552,7 +552,18 @@ class _AnalyticsPageState extends _EcosystemState<AnalyticsPage> {
         _metric('Үйлчилгээ үзүүлэгчид', paymentStats['provider_net_after_refunds_mnt']),
         _metric('Буцаалт', paymentStats['refunded_mnt']),
       ]))),
-      if (paymentStats['categories'] is Map) ...((paymentStats['categories'] as Map).entries.map((entry) => Card(child: ExpansionTile(\n        title: Text(entry.key.toString()),\n        subtitle: Text('Шимтгэл: ${entry.value['commission']} ₮'),\n        children: [\n          ListTile(title: const Text('Нийт төлбөр'), trailing: Text('${entry.value['gross']} ₮')),\n          ListTile(title: const Text('Үйлчилгээ үзүүлэгчийн орлого'), trailing: Text('${entry.value['provider_net']} ₮')),\n          ListTile(title: const Text('Буцаалт'), trailing: Text('${entry.value['refund']} ₮')),\n        ],\n      )))),\n      ...stats.entries.map((x) => Card(child: ListTile(title: Text(x.key), trailing: Text(x.value.toString(), style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18))))),
+      if (paymentStats['categories'] is Map)
+        ...((paymentStats['categories'] as Map).entries.map((entry) => Card(
+          child: ExpansionTile(
+            title: Text(entry.key.toString()),
+            subtitle: Text('Шимтгэл: ${entry.value['commission']} ₮'),
+            children: [
+              ListTile(title: const Text('Нийт төлбөр'), trailing: Text('${entry.value['gross']} ₮')),
+              ListTile(title: const Text('Үйлчилгээ үзүүлэгчийн орлого'), trailing: Text('${entry.value['provider_net']} ₮')),
+              ListTile(title: const Text('Буцаалт'), trailing: Text('${entry.value['refund']} ₮')),
+            ],
+          ),
+        ))),
     ]),
   );
 }
