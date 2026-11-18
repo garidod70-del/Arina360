@@ -102,6 +102,20 @@ class _AdminRefereePageState extends State<AdminRefereePage> {
     );
   }
 
+  Widget _choiceField(String label, TextEditingController controller, List<String> options) {
+    final value = options.contains(controller.text) ? controller.text : options.first;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: DropdownButtonFormField<String>(
+        value: value,
+        isExpanded: true,
+        decoration: InputDecoration(labelText: label),
+        items: options.map((option) => DropdownMenuItem(value: option, child: Text(option))).toList(),
+        onChanged: (next) { if (next != null) controller.text = next; },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -113,9 +127,9 @@ class _AdminRefereePageState extends State<AdminRefereePage> {
         const SizedBox(height: 14),
         Form(key: _formKey, child: Column(children: [
           _field('Хэрэглэгчийн утас', _phone, hint: '+976...'),
-          _field('Спортын төрөл', _sport),
-          _field('Шүүгчийн зэрэглэл', _rank),
-          _field('Бүс / аймаг', _region),
+          _choiceField('Спортын төрөл', _sport, const ['Жүдо', 'Самбо', 'Чөлөөт бөх', 'Үндэсний бөх', 'Бокс', 'Волейбол', 'Сагсан бөмбөг', 'Хөл бөмбөг', 'Таеквондо', 'Каратэ', 'Гимнастик', 'Бусад']),
+          _choiceField('Шүүгчийн зэрэглэл', _rank, const ['Олон улсын', 'Улсын', 'I зэрэг', 'II зэрэг', 'III зэрэг']),
+          _choiceField('Бүс / аймаг', _region, const ['Улаанбаатар', 'Архангай', 'Баян-Өлгий', 'Баянхонгор', 'Булган', 'Говь-Алтай', 'Говьсүмбэр', 'Дархан-Уул', 'Дорноговь', 'Дорнод', 'Дундговь', 'Завхан', 'Орхон', 'Өвөрхангай', 'Өмнөговь', 'Сүхбаатар', 'Сэлэнгэ', 'Төв', 'Увс', 'Ховд', 'Хөвсгөл', 'Хэнтий']),
           _field('Лицензийн дугаар', _license),
           _field('Лиценз олгосон байгууллага', _issuer),
           _field('Хөлсний суурь дүн (₮)', _fee, number: true),
