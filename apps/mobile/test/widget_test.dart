@@ -71,7 +71,13 @@ void main() {
     await tester.ensureVisible(find.text('Шүүгч'));
     await tester.tap(find.text('Шүүгч'));
     await tester.pumpAndSettle();
-    expect(find.text('Шүүгчийн үйлчилгээ'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(AppBar),
+        matching: find.text('Шүүгчийн үйлчилгээ'),
+      ),
+      findsOneWidget,
+    );
     expect(tester.takeException(), isNull);
 
     await tester.pageBack();
@@ -79,7 +85,13 @@ void main() {
     await tester.ensureVisible(find.text('Дасгалжуулагч'));
     await tester.tap(find.text('Дасгалжуулагч'));
     await tester.pumpAndSettle();
-    expect(find.text('Дасгалжуулагч'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(AppBar),
+        matching: find.text('Дасгалжуулагч'),
+      ),
+      findsOneWidget,
+    );
     expect(tester.takeException(), isNull);
 
     await tester.pageBack();
@@ -87,7 +99,13 @@ void main() {
     await tester.ensureVisible(find.text('Заал захиалга'));
     await tester.tap(find.text('Заал захиалга'));
     await tester.pumpAndSettle();
-    expect(find.text('Заал захиалга'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(AppBar),
+        matching: find.text('Заал захиалга'),
+      ),
+      findsOneWidget,
+    );
     expect(tester.takeException(), isNull);
   });
 }
