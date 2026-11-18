@@ -54,15 +54,35 @@ class EcosystemHubPage extends StatelessWidget {
                   gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Theme.of(context).colorScheme.surface, Theme.of(context).colorScheme.primary.withValues(alpha: .09)]),
                   borderRadius: BorderRadius.circular(18),
                 ),
-                child: Padding(padding: const EdgeInsets.all(16), child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Container(width: 48, height: 48, decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFF873BEE), Color(0xFF268CFF)]), borderRadius: BorderRadius.circular(16)), child: Icon(item.icon, size: 26, color: Colors.white)),
-                  Text(item.title, style: const TextStyle(fontWeight: FontWeight.w900)),
-                  Align(alignment: Alignment.centerRight, child: Icon(Icons.arrow_forward_rounded, color: Theme.of(context).colorScheme.secondary)),
-                ],
-              )),
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(colors: [Color(0xFF873BEE), Color(0xFF268CFF)]),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Icon(item.icon, size: 24, color: Colors.white),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        item.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 12),
+                      ),
+                      const Spacer(),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: Icon(Icons.arrow_forward_rounded, size: 18, color: Theme.of(context).colorScheme.secondary),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ));
           },
