@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+import hashlib
 import uuid
 
 from fastapi.testclient import TestClient
@@ -6,6 +7,7 @@ from fastapi.testclient import TestClient
 from app.main import app
 from app.database import SessionLocal
 from app.models import User, UserRole
+from app.ecosystem_models import QrPass
 
 
 def register(client, phone):
@@ -119,6 +121,15 @@ def test_qr_pass_is_single_use_and_permission_checked():
         })
         assert issued.status_code == 201
         token = issued.json()["token"]
+        db = SessionLocal()
+        try:
+            stored_pass = db.query(QrPass).filter_by(
+                token_hash=hashlib.sha256(token.encode()).hexdigest()
+            ).one()
+            assert stored_pass.token_hash != token
+            assert stored_pass.used_at is None
+        finally:
+            db.close()
 
         denied = client.post("/api/v1/qr/verify", headers=other, json={"token": token})
         assert denied.status_code == 403
@@ -323,3 +334,28 @@ def test_notification_read_is_scoped_to_authenticated_user():
             f"/api/v1/notifications/{notification_id}/read", headers=recipient
         )
         assert allowed.status_code == 200
+
+
+
+def test_qr_pass_expiry_is_enforced():
+    with TestClient(app) as client:
+        owner, _ = register(client, "+97698" + suffix() + "01")
+        issued = client.post("/api/v1/qr/passes", headers=owner, json={
+            "purpose": "fitness_entry", "reference_type": "fitness_pass",
+            "reference_id": 24, "expires_in_minutes": 5,
+        })
+        assert issued.status_code == 201
+        token = issued.json()["token"]
+
+        db = SessionLocal()
+        try:
+            stored_pass = db.query(QrPass).filter_by(
+                token_hash=hashlib.sha256(token.encode()).hexdigest()
+            ).one()
+            stored_pass.expires_at = datetime.now(timezone.utc) - timedelta(minutes=1)
+            db.commit()
+        finally:
+            db.close()
+
+        expired = client.post("/api/v1/qr/verify", headers=owner, json={"token": token})
+        assert expired.status_code == 410
