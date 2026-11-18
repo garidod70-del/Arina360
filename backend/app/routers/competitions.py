@@ -41,8 +41,8 @@ def _tournament_output(item: Tournament, db: Session) -> TournamentOutput:
 
 def _participant_output(item: TournamentParticipant) -> ParticipantOutput:
     return ParticipantOutput(
-        id=item.id, tournament_id=item.tournament_id, user_id=item.user_id,
-        full_name=item.full_name, club_name=item.club_name, contact_phone=item.contact_phone,
+        id=item.id, tournament_id=item.tournament_id,
+        full_name=item.full_name, club_name=item.club_name,
         seed=item.seed, status=item.status, created_at=item.created_at,
     )
 
