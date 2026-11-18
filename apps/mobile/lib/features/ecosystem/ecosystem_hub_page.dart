@@ -560,6 +560,7 @@ class _AnalyticsPageState extends _EcosystemState<AnalyticsPage> {
         _metric('Үйлчилгээ үзүүлэгчид', paymentStats['provider_net_after_refunds_mnt']),
         _metric('Буцаалт', paymentStats['refunded_mnt']),
         ListTile(dense: true, title: const Text('Төлбөр хүлээгдэж буй нэхэмжлэл'), trailing: Text((paymentStats['pending_invoices'] ?? 0).toString())),
+        ListTile(dense: true, title: const Text('Төлбөр хүлээгдэж буй захиалга'), trailing: Text((paymentStats['pending_orders_total'] ?? 0).toString())),
       ]))),
       if (paymentStats['categories'] is Map)
         ...((paymentStats['categories'] as Map).entries.map((entry) => Card(
