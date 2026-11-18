@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feature/arena360-phase4-ecosystem
+      - feature/arena360-quality-hardening
     paths:
       - "backend/**"
       - "apps/mobile/**"
