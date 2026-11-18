@@ -48,7 +48,7 @@ class RefereeBooking(Base):
     transport_fee: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     food_fee: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     contact_name: Mapped[str] = mapped_column(String(120), nullable=False)
-    contact_phone: Mapped[str] = mapped_column(String(24), nullable=False)
+    contact_phone: Mapped[str | None] = mapped_column(String(24), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(String(24), default="pending", nullable=False, index=True)
     payment_status: Mapped[str] = mapped_column(String(20), default="unpaid", nullable=False, index=True)
