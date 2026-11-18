@@ -142,7 +142,7 @@ class _QrPassPageState extends _EcosystemState<QrPassPage> {
       MaterialPageRoute(builder: (_) => Scaffold(
         appBar: AppBar(title: const Text('QR уншуулах')),
         body: MobileScanner(onDetect: (capture) {
-          final raw = capture.barcodes.firstOrNull?.rawValue;
+          final raw = capture.barcodes.isNotEmpty ? capture.barcodes.first.rawValue : null;
           if (raw != null && raw.isNotEmpty && Navigator.of(context).canPop()) {
             Navigator.of(context).pop(raw);
           }
