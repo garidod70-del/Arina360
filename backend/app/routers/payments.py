@@ -65,7 +65,8 @@ def _order_for_payment(db: Session, user: User, order_type: str, order_id: int):
             raise HTTPException(status_code=409, detail="Төлбөр хийхээс өмнө шүүгч томилогдсон байх шаардлагатай.")
         if order.payment_status == "paid":
             raise HTTPException(status_code=409, detail="Энэ захиалгын төлбөр аль хэдийн төлөгдсөн.")
-        multiplier = order.work_days if order.payment_type == "Нэг өдрөөр" else 1\n        amount = order.referee_count * order.unit_fee * multiplier + order.transport_fee + order.food_fee
+        multiplier = order.work_days if order.payment_type == "Нэг өдрөөр" else 1
+        amount = order.referee_count * order.unit_fee * multiplier + order.transport_fee + order.food_fee
         allocations[order.referee_user_id] = amount
         category = "referee"
         description = f"ARENA 360 шүүгчийн үйлчилгээ #{order.id}"
