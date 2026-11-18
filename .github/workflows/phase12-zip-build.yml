@@ -42,13 +42,20 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          import re
-          p = Path('android/app/src/main/AndroidManifest.xml')
-          s = p.read_text()
-          if 'android.permission.INTERNET' not in s:
-              s = s.replace('<manifest', '<manifest\n    <uses-permission android:name="android.permission.INTERNET" />', 1)
-          s = re.sub(r'android:label="[^"]*"', 'android:label="ARENA 360"', s)
-          p.write_text(s)
+          import xml.etree.ElementTree as ET
+
+          manifest = Path('android/app/src/main/AndroidManifest.xml')
+          android_ns = 'http://schemas.android.com/apk/res/android'
+          ET.register_namespace('android', android_ns)
+          tree = ET.parse(manifest)
+          root = tree.getroot()
+          name_attr = f'{{{android_ns}}}name'
+          if not any(node.tag == 'uses-permission' and node.get(name_attr) == 'android.permission.INTERNET' for node in root):
+              root.insert(0, ET.Element('uses-permission', {name_attr: 'android.permission.INTERNET'}))
+          application = root.find('application')
+          if application is not None:
+              application.set(f'{{{android_ns}}}label', 'ARENA 360')
+          tree.write(manifest, encoding='utf-8', xml_declaration=True)
           PY
       - name: Resolve packages
         working-directory: phase12/arena360-starter/apps/mobile
