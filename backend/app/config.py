@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     auto_create_tables: bool = True
     cors_origins: str = "http://localhost:3000"
     admin_bootstrap_key: str = ""
+    payment_webhook_secret: str = ""
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
